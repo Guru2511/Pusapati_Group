@@ -1,6 +1,6 @@
 # Pusapati Group — TanStack Start
 
-A [TanStack Start](https://tanstack.com/start) app (React 19, plain JavaScript) with file-based routes and server rendering. The site is hosted by Base44; public form submissions are stored in Neon Postgres.
+A [TanStack Start](https://tanstack.com/start) app (React 19, plain JavaScript) with file-based routes and server rendering. It supports Base44/Cloudflare and Vercel deployments; public form submissions are stored in Neon Postgres.
 
 ## What is in the starter
 
@@ -29,6 +29,12 @@ base44 deploy         # or publish from the Base44 builder
 ```
 
 There is no `index.html`: the HTML document is rendered on the server from `src/routes/__root.jsx`. The build runs through the [Cloudflare Vite plugin](https://developers.cloudflare.com/workers/vite-plugin/), so dev and build both execute server code in `workerd`.
+
+## Deploy to Vercel
+
+Vercel builds use Nitro to produce the TanStack Start server functions; the existing Cloudflare plugin remains enabled for Base44 builds. `vercel.json` selects the TanStack Start framework preset, and Vercel sets `VERCEL=1` to choose the Nitro build.
+
+Import the GitHub repository into Vercel and use the repository root as the project root. Leave the build command and output directory at their framework defaults. Add the server-side environment variables used by the app in Vercel Project Settings → Environment Variables: `DATABASE_URL`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_API_VERSION`, and `WHATSAPP_TEMPLATE_NAME`; `WHATSAPP_TEMPLATE_LANGUAGE` is optional and defaults to `en_US`. These Vercel variables are separate from Base44 secrets. Redeploy after adding or changing them.
 
 ## How the pieces fit
 

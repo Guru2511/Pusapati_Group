@@ -38,7 +38,7 @@ export default defineConfig({
     base44({
       hmrNotifier: true,
       navigationNotifier: true,
-      analyticsTracker: true,
+      analyticsTracker: !isVercel,
       visualEditAgent: true,
     }),
     ...(isVercel

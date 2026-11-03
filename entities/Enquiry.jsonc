@@ -1,0 +1,104 @@
+{
+  "name": "Enquiry",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "company": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "concrete",
+        "aggregates",
+        "ggbs",
+        "construction_materials",
+        "villas",
+        "exports",
+        "other",
+        "general"
+      ]
+    },
+    "location": {
+      "type": "string"
+    },
+    "interest": {
+      "type": "string"
+    },
+    "quantity": {
+      "type": "string"
+    },
+    "timeline": {
+      "type": "string"
+    },
+    "pour_date": {
+      "type": "string"
+    },
+    "pour_time": {
+      "type": "string"
+    },
+    "pump_required": {
+      "type": "string",
+      "enum": [
+        "yes",
+        "no",
+        "unsure"
+      ]
+    },
+    "incoterms": {
+      "type": "string"
+    },
+    "requirement": {
+      "type": "string"
+    },
+    "source_page": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "new",
+        "contacted",
+        "qualified",
+        "closed"
+      ],
+      "default": "new"
+    }
+  },
+  "required": [
+    "name",
+    "phone",
+    "category",
+    "requirement"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

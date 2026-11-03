@@ -58,7 +58,7 @@ base44 secrets set RESEND_API_KEY
 base44 secrets set RESEND_FROM_EMAIL
 ```
 
-`RESEND_FROM_EMAIL` must be a sender address verified in Resend. Alerts are sent to `contact@pusapatigroup.com`.
+`RESEND_FROM_EMAIL` must be a sender address verified in Resend. Alerts are sent to `Pusapatigroup@gmail.com`, and replies go to the customer's submitted email address.
 
 For WhatsApp alerts, configure a Meta WhatsApp Business Cloud API sender and set:
 

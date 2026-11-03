@@ -38,7 +38,7 @@ export const CONTACT = {
   phone: "+91 93905 64371",
   phoneNote: "Call or WhatsApp the group",
   whatsapp: "https://wa.me/919390564371",
-  email: "contact@pusapatigroup.com",
+  email: "Pusapatigroup@gmail.com",
   emailNote: "Email the group",
   hours: "Mon – Sat, 9:30 am – 6:30 pm IST",
 };

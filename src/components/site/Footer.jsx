@@ -120,7 +120,15 @@ export default function Footer() {
 
                 <p className={`${heading} mt-7`}>Social</p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {["LinkedIn", "Instagram", "YouTube", "X"].map((s) => (
+                  <a
+                    href="https://www.instagram.com/pusapati_industrial_pvt.ltd?rpxt=bjBrb3AybDMycjdx"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-full border border-paper/15 px-3 py-1.5 text-[11px] text-paper/65 transition-colors hover:border-orange hover:text-orange"
+                  >
+                    Instagram
+                  </a>
+                  {["LinkedIn", "YouTube", "X"].map((s) => (
                     <span
                       key={s}
                       className="rounded-full border border-paper/15 px-3 py-1.5 text-[11px] text-paper/40"

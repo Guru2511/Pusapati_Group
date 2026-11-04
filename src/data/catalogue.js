@@ -451,7 +451,14 @@ export const leadership = [
     scope:
       "A civil engineer from NIT Agartala, Sunil founded Pusapati Industrial Pvt. Ltd. (PIPL Concrete) in 2024 after working across quality control, ready-mix concrete sales and business development. He leads group growth, client relationships, partnerships and fundraising; under his leadership, the group has executed more than ₹50 Cr in contracts and expanded into aggregates, minerals, GGBS and international trade.",
     image: "/images/leadership/sunil-pusapati.png",
-    highlights: ["Civil Engineering · NIT Agartala", "Business development", "Investor relations", "RMC & infrastructure"],
+    highlights: [
+      "Civil Engineering · NIT Agartala",
+      "Concrete · Aggregates · Minerals · GGBS",
+      "Vendor management",
+      "Business development",
+      "Investor relations",
+      "RMC & infrastructure",
+    ],
   },
   {
     name: "Pavan Pusapati",
@@ -459,7 +466,7 @@ export const leadership = [
     scope:
       "Pavan oversees day-to-day operations across the group, with hands-on experience in ready-mix concrete, aggregates, minerals and GGBS. He keeps production, logistics and site supply running smoothly, drawing on earlier experience in automobile operations, negotiation and customer service.",
     image: "/images/leadership/pavan-pusapati.jpeg",
-    highlights: ["Concrete · Aggregates · Minerals · GGBS", "Plant & logistics operations", "Vendor management"],
+    highlights: ["Plant & logistics operations", "Account management"],
   },
 ];
 

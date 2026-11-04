@@ -199,20 +199,30 @@
   }
 }
 
-/* A gentle perspective tilt keeps the About hero logo dimensional without moving its content. */
+/* A restrained tilt gives the About hero logo depth without distracting from the content. */
+.about-logo-stage {
+  perspective: 1000px;
+}
+
 .about-logo-3d {
   transform-origin: center;
   transform-style: preserve-3d;
-  animation: about-logo-3d 18s ease-in-out infinite alternate;
+  animation: about-logo-3d 12s ease-in-out infinite alternate;
   will-change: transform;
 }
 
 @keyframes about-logo-3d {
   from {
-    transform: perspective(1400px) rotateY(-4deg) rotateX(1deg) scale(1.12) translateY(0);
+    transform: rotateY(-5deg) rotateX(2deg) translateY(0);
   }
   to {
-    transform: perspective(1400px) rotateY(4deg) rotateX(-1deg) scale(1.12) translateY(-0.5%);
+    transform: rotateY(5deg) rotateX(-2deg) translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .about-logo-3d {
+    animation: none;
   }
 }
 

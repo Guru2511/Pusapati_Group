@@ -9,6 +9,9 @@ export default function PageHero({
   image,
   imageAlt,
   imageClassName,
+  foregroundImage,
+  foregroundImageAlt,
+  foregroundImageClassName,
   meta,
   children,
   className,
@@ -36,22 +39,37 @@ export default function PageHero({
       />
 
       <div className="container-x relative pb-16 pt-14 sm:pb-20 lg:pb-24 lg:pt-20">
-        <div className="flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-700">
-          <span className="h-1.5 w-1.5 rounded-full bg-orange" aria-hidden="true" />
-          <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-paper/60">{eyebrow}</span>
+        <div className={cn(foregroundImage && "grid gap-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)] lg:items-center")}>
+          <div>
+            <div className="flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-700">
+              <span className="h-1.5 w-1.5 rounded-full bg-orange" aria-hidden="true" />
+              <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-paper/60">{eyebrow}</span>
+            </div>
+
+            <h1 className="mt-6 max-w-[24ch] font-heading text-[clamp(2.4rem,6.4vw,5rem)] font-semibold leading-[0.96] tracking-[-0.04em] text-paper animate-in fade-in slide-in-from-bottom-4 duration-700">
+              {title}
+            </h1>
+
+            {intro && (
+              <p className="mt-6 max-w-2xl text-[16px] leading-[1.7] text-paper/65 animate-in fade-in slide-in-from-bottom-4 duration-700 [animation-delay:120ms]">
+                {intro}
+              </p>
+            )}
+
+            {children && <div className="mt-9 animate-in fade-in duration-700 [animation-delay:200ms]">{children}</div>}
+          </div>
+
+          {foregroundImage && (
+            <div className="about-logo-stage mx-auto w-full max-w-[28rem] rounded-3xl border border-white/60 bg-white p-5 shadow-[0_30px_90px_-35px_rgba(226,112,27,0.65)] sm:p-8">
+              <Image
+                src={foregroundImage}
+                alt={foregroundImageAlt || ""}
+                className={cn("about-logo-3d block h-auto w-full object-contain", foregroundImageClassName)}
+                fittingType="contain"
+              />
+            </div>
+          )}
         </div>
-
-        <h1 className="mt-6 max-w-[24ch] font-heading text-[clamp(2.4rem,6.4vw,5rem)] font-semibold leading-[0.96] tracking-[-0.04em] text-paper animate-in fade-in slide-in-from-bottom-4 duration-700">
-          {title}
-        </h1>
-
-        {intro && (
-          <p className="mt-6 max-w-2xl text-[16px] leading-[1.7] text-paper/65 animate-in fade-in slide-in-from-bottom-4 duration-700 [animation-delay:120ms]">
-            {intro}
-          </p>
-        )}
-
-        {children && <div className="mt-9 animate-in fade-in duration-700 [animation-delay:200ms]">{children}</div>}
 
         {meta?.length ? (
           <dl className="mt-12 grid gap-3 border-t border-paper/15 pt-6 sm:grid-cols-2 lg:grid-cols-4">

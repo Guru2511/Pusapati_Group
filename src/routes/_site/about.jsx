@@ -30,8 +30,10 @@ function AboutPage() {
         eyebrow="About the group"
         title="Built on stone. Structured for what comes next."
         intro="Pusapati Group began with PIPL Concrete, a ready-mix supplier founded in 2024, and has grown into four connected engines spanning materials, trade, real estate and hospitality, with digital infrastructure planned for the future."
-        foregroundImage={IMG.piplLogo}
-        foregroundImageAlt="Pusapati Industrial Pvt. Ltd. logo"
+        image={IMG.piplLogo}
+        imageAlt="Pusapati Industrial Pvt. Ltd. logo"
+        imageFit="contain"
+        imageClassName="about-logo-3d object-contain opacity-25"
         meta={[
           { label: "Companies", value: "8" },
           { label: "Engines", value: "4" },

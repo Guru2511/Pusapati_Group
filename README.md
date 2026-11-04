@@ -34,8 +34,7 @@ There is no `index.html`: the HTML document is rendered on the server from `src/
 
 Vercel builds use Nitro to produce the TanStack Start server functions; the existing Cloudflare plugin remains enabled for Base44 builds. `vercel.json` selects the TanStack Start framework preset, and Vercel sets `VERCEL=1` to choose the Nitro build.
 
-Import the GitHub repository into Vercel and use the repository root as the project root. Leave the build command and output directory at their framework defaults. Add the server-side environment variables used by the app in Vercel Project Settings → Environment Variables: `DATABASE_URL`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_API_VERSION`, and `WHATSAPP_TEMPLATE_NAME`; `WHATSAPP_TEMPLATE_LANGUAGE` is optional and defaults to `en_US`. These Vercel variables are separate from Base44 secrets. Redeploy after adding or changing them.
-
+Import the GitHub repository into Vercel and use the repository root as the project root. Leave the build command and output directory at their framework defaults. Add the server-side environment variables used by the app in Vercel Project Settings → Environment Variables: `DATABASE_URL`, `WEB3FORM_ACCESS_KEY`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_API_VERSION`, and `WHATSAPP_TEMPLATE_NAME`; `WHATSAPP_TEMPLATE_LANGUAGE` is optional and defaults to `en_US`. These Vercel variables are separate from Base44 secrets. Redeploy after adding or changing them.
 ## How the pieces fit
 
 - **Pages** are files in `src/routes/`. A route's `loader` runs on the server for a document request and in the browser for a client navigation; `Route.useLoaderData()` gives the component the resolved data.
@@ -51,14 +50,9 @@ Import the GitHub repository into Vercel and use the repository root as the proj
 
 ## Configure intake alerts
 
-Set these server-side Base44 secrets to enable email alerts through Resend:
+Email alerts are sent through Web3Forms. In Vercel, add `WEB3FORM_ACCESS_KEY` under Project → Settings → Environment Variables, and configure the recipient for that access key in the Web3Forms dashboard. The API request uses the submitter's email as the reply-to address when provided.
 
-```bash
-base44 secrets set RESEND_API_KEY
-base44 secrets set RESEND_FROM_EMAIL
-```
-
-`RESEND_FROM_EMAIL` must be a sender address verified in Resend. Alerts are sent to `Pusapatigroup@gmail.com`, and replies go to the customer's submitted email address.
+Each intake submission triggers one owner alert. Customer confirmation emails are not sent by this integration. Redeploy after adding or changing the environment variable.
 
 For WhatsApp alerts, configure a Meta WhatsApp Business Cloud API sender and set:
 

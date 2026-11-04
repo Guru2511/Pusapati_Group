@@ -12,7 +12,7 @@ import {
 import { departments } from "@/data/catalogue";
 
 export default function CareerForm({ defaultDepartment = "" }) {
-  const { error, run, reset, pending, done } = useIntake();
+  const { error, notificationWarning, run, reset, pending, done } = useIntake();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -36,6 +36,7 @@ export default function CareerForm({ defaultDepartment = "" }) {
       <SuccessPanel
         title="Application received."
         body="Thank you for your interest in the group. Shortlisted candidates are contacted by the relevant department; applications stay on record for future openings."
+        warning={notificationWarning}
         onReset={reset}
         resetLabel="Submit another application"
       />

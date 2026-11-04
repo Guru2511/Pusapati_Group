@@ -17,16 +17,6 @@ function firstValue(payload, keys) {
   return "Not provided";
 }
 
-function formatEmail(type, payload) {
-  const lines = Object.entries(payload).map(([key, value]) => {
-    const label = key.replaceAll("_", " ");
-    const formattedValue = typeof value === "boolean" ? (value ? "Yes" : "No") : value || "Not provided";
-    return `${label}: ${formattedValue}`;
-  });
-
-  return [`New ${type} submission`, "", ...lines].join("\n");
-}
-
 function formatWhatsApp(type, payload) {
   const details = [
     `New ${type} submission`,
@@ -37,44 +27,6 @@ function formatWhatsApp(type, payload) {
   ];
 
   return details.join("\n").slice(0, 900);
-}
-
-async function sendWeb3FormsEmail({ subject, text, replyTo }) {
-  const accessKey = await requiredSecret("WEB3FORM_ACCESS_KEY");
-  const response = await fetch("https://api.web3forms.com/submit", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({
-      access_key: accessKey,
-      subject,
-      from_name: "Pusapati Group",
-      message: text,
-      ...(replyTo ? { email: replyTo } : {}),
-      ...(replyTo ? { replyto: replyTo } : {}),
-    }),
-  });
-
-  const payload = await response.json();
-  if (!response.ok || payload.success === false) {
-    const message =
-      typeof payload.message === "string"
-        ? payload.message
-        : typeof payload.body?.message === "string"
-          ? payload.body.message
-          : `Web3Forms returned HTTP ${response.status}.`;
-    throw new Error(message);
-  }
-}
-
-async function sendOwnerEmail(type, payload) {
-  await sendWeb3FormsEmail({
-    subject: `New ${type} submission | Pusapati Group`,
-    text: formatEmail(type, payload),
-    replyTo: payload.email,
-  });
 }
 
 async function sendWhatsApp(type, payload) {
@@ -136,7 +88,6 @@ async function attemptNotification(channel, send) {
 
 export async function notifyIntakeSubmission(type, payload) {
   await Promise.all([
-    attemptNotification("Web3Forms email", () => sendOwnerEmail(type, payload)),
     attemptNotification("WhatsApp", () => sendWhatsApp(type, payload)),
   ]);
 }

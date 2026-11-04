@@ -34,7 +34,7 @@ There is no `index.html`: the HTML document is rendered on the server from `src/
 
 Vercel builds use Nitro to produce the TanStack Start server functions; the existing Cloudflare plugin remains enabled for Base44 builds. `vercel.json` selects the TanStack Start framework preset, and Vercel sets `VERCEL=1` to choose the Nitro build.
 
-Import the GitHub repository into Vercel and use the repository root as the project root. Leave the build command and output directory at their framework defaults. Add the server-side environment variables used by the app in Vercel Project Settings → Environment Variables: `DATABASE_URL`, `WEB3FORM_ACCESS_KEY`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_API_VERSION`, and `WHATSAPP_TEMPLATE_NAME`; `WHATSAPP_TEMPLATE_LANGUAGE` is optional and defaults to `en_US`. These Vercel variables are separate from Base44 secrets. Redeploy after adding or changing them.
+Import the GitHub repository into Vercel and use the repository root as the project root. Leave the build command and output directory at their framework defaults. Add the server-side environment variables used by the app in Vercel Project Settings → Environment Variables: `DATABASE_URL`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_API_VERSION`, and `WHATSAPP_TEMPLATE_NAME`; `WHATSAPP_TEMPLATE_LANGUAGE` is optional and defaults to `en_US`. Also add `VITE_WEB3FORM_ACCESS_KEY` as a build environment variable for browser-side email submission. These Vercel variables are separate from Base44 secrets. Redeploy after adding or changing them.
 ## How the pieces fit
 
 - **Pages** are files in `src/routes/`. A route's `loader` runs on the server for a document request and in the browser for a client navigation; `Route.useLoaderData()` gives the component the resolved data.
@@ -50,9 +50,9 @@ Import the GitHub repository into Vercel and use the repository root as the proj
 
 ## Configure intake alerts
 
-Email alerts are sent through Web3Forms. In Vercel, add `WEB3FORM_ACCESS_KEY` under Project → Settings → Environment Variables, and configure the recipient for that access key in the Web3Forms dashboard. The API request uses the submitter's email as the reply-to address when provided.
+Email alerts are sent from the browser through Web3Forms, which avoids server-side API restrictions. In Vercel, add `VITE_WEB3FORM_ACCESS_KEY` under Project → Settings → Environment Variables, and configure the recipient for that access key in the Web3Forms dashboard. This access key is included in the public browser bundle by design; enable Web3Forms' available spam protections. The API request uses the submitter's email as the reply-to address when provided.
 
-Each intake submission triggers one owner alert. Customer confirmation emails are not sent by this integration. Redeploy after adding or changing the environment variable.
+Each intake submission is saved to Neon on the server and triggers one owner alert through Web3Forms in the browser. Customer confirmation emails are not sent by this integration. Redeploy after adding or changing the environment variable.
 
 For WhatsApp alerts, configure a Meta WhatsApp Business Cloud API sender and set:
 

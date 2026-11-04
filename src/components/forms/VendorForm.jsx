@@ -12,7 +12,7 @@ import {
 import { vendorCategories } from "@/data/catalogue";
 
 export default function VendorForm() {
-  const { error, run, reset, pending, done } = useIntake();
+  const { error, notificationWarning, run, reset, pending, done } = useIntake();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -37,6 +37,7 @@ export default function VendorForm() {
       <SuccessPanel
         title="Registration received."
         body="Your company is now in the vendor evaluation queue. The procurement team will contact you with the document checklist for your category. Registration does not guarantee business."
+        warning={notificationWarning}
         onReset={reset}
         resetLabel="Register another company"
       />

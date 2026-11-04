@@ -11,7 +11,7 @@ import {
 } from "@/components/forms/Fields";
 
 export default function InvestorForm() {
-  const { error, run, reset, pending, done } = useIntake();
+  const { error, notificationWarning, run, reset, pending, done } = useIntake();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -33,6 +33,7 @@ export default function InvestorForm() {
       <SuccessPanel
         title="Request received."
         body="Your request has been logged. The group will share information appropriate to your investor category, subject to confidentiality and applicable regulations."
+        warning={notificationWarning}
         onReset={reset}
         resetLabel="Submit another request"
       />

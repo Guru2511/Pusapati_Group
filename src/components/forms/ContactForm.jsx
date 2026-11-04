@@ -10,7 +10,7 @@ import {
 } from "@/components/forms/Fields";
 
 export default function ContactForm() {
-  const { error, run, reset, pending, done } = useIntake();
+  const { error, notificationWarning, run, reset, pending, done } = useIntake();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -31,6 +31,7 @@ export default function ContactForm() {
       <SuccessPanel
         title="Message sent."
         body="Thank you — your message has reached the group enquiry desk. We respond within one business day, Monday to Saturday."
+        warning={notificationWarning}
         onReset={reset}
         resetLabel="Send another message"
       />

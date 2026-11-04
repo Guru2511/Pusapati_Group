@@ -80,7 +80,7 @@ export function FormError({ message }) {
   );
 }
 
-export function SuccessPanel({ title, body, onReset, resetLabel = "Send another enquiry" }) {
+export function SuccessPanel({ title, body, warning, onReset, resetLabel = "Send another enquiry" }) {
   return (
     <div className="border border-ink/10 bg-paper p-8">
       <span className="grid h-11 w-11 place-items-center rounded-full bg-orange/15">
@@ -88,6 +88,11 @@ export function SuccessPanel({ title, body, onReset, resetLabel = "Send another 
       </span>
       <h3 className="mt-5 font-display text-2xl font-semibold tracking-tight text-ink">{title}</h3>
       <p className="mt-3 max-w-md text-[15px] leading-relaxed text-slate">{body}</p>
+      {warning && (
+        <p role="alert" className="mt-4 max-w-md border-l-2 border-orange bg-orange/5 px-3 py-2 text-[13px] text-ink">
+          {warning}
+        </p>
+      )}
       {onReset && (
         <button
           type="button"

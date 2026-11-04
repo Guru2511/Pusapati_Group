@@ -118,7 +118,7 @@ const extras = {
 export default function QuoteForm({ initialCategory = "concrete" }) {
   const [category, setCategory] = useState(initialCategory);
   const [values, setValues] = useState({});
-  const { state, error, run, reset, pending, done } = useIntake();
+  const { state, error, notificationWarning, run, reset, pending, done } = useIntake();
 
   const set = (name) => (e) => setValues((v) => ({ ...v, [name]: e.target.value }));
 
@@ -150,6 +150,7 @@ export default function QuoteForm({ initialCategory = "concrete" }) {
       <SuccessPanel
         title="Enquiry received."
         body="Your requirement has reached the group enquiry desk. A team member will respond within one business day with specifications, availability and next steps."
+        warning={notificationWarning}
         onReset={() => {
           setValues({});
           reset();

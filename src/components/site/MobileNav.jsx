@@ -3,7 +3,8 @@ import { Link } from "@tanstack/react-router";
 import { ChevronDown, ArrowUpRight } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import Logo from "@/components/site/Logo";
-import { engines, companiesByEngine, CONTACT } from "@/data/group";
+import { engines, companiesByEngine } from "@/data/group";
+import { usePublicContact } from "@/lib/site-preview";
 
 const links = [
   { label: "Home", to: "/" },
@@ -19,6 +20,7 @@ const links = [
 
 export default function MobileNav({ open, onOpenChange }) {
   const [companiesOpen, setCompaniesOpen] = useState(false);
+  const contact = usePublicContact();
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -98,14 +100,14 @@ export default function MobileNav({ open, onOpenChange }) {
 
           <div className="mt-8 rounded-2xl border border-ink/10 bg-white/60 p-5">
             <p className="eyebrow">Enquiries</p>
-            <a href={`tel:${CONTACT.phone.replace(/\s/g, "")}`} className="mt-2 block text-[16px] font-medium text-ink">
-              {CONTACT.phone}
+            <a href={`tel:${contact.phone.replace(/\s/g, "")}`} className="mt-2 block text-[16px] font-medium text-ink">
+              {contact.phone}
             </a>
-            <a href={`mailto:${CONTACT.email}`} className="mt-1 block text-[13.5px] text-slate">
-              {CONTACT.email}
+            <a href={`mailto:${contact.email}`} className="mt-1 block text-[13.5px] text-slate">
+              {contact.email}
             </a>
             <a
-              href={CONTACT.whatsapp}
+              href={contact.whatsapp}
               target="_blank"
               rel="noreferrer noopener"
               className="mt-1 block text-[13.5px] text-slate"

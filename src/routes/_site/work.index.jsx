@@ -6,6 +6,7 @@ import PageHero from "@/components/site/PageHero";
 import Reveal from "@/components/site/Reveal";
 import { projects } from "@/data/catalogue";
 import { companies, companyBySlug, IMG } from "@/data/group";
+import { applyPublishedContent, usePublishedContent } from "@/lib/site-preview";
 
 export const Route = createFileRoute("/_site/work/")({
   component: WorkPage,
@@ -24,6 +25,27 @@ export const Route = createFileRoute("/_site/work/")({
 const all = "all";
 
 function WorkPage() {
+  const publishedProjects = usePublishedContent("projects");
+  const liveProjects = applyPublishedContent(projects, publishedProjects, "projects", (project) => `project-${project.slug}`, (project, fields) => ({
+    ...project,
+    slug: fields.slug || project.slug,
+    name: fields.name,
+    client: fields.client,
+    location: fields.location,
+    sector: fields.sector,
+    companySlug: fields.companySlug || project.companySlug,
+    status: fields.status,
+    scope: fields.scope,
+    summary: fields.summary,
+    overview: fields.overview || fields.summary,
+    image: fields.image,
+    gallery: (fields.gallery || "").split("\n").filter(Boolean),
+  }), (fields) => ({
+    ...fields,
+    companySlug: fields.companySlug || "pipl-concrete",
+    overview: fields.overview || fields.summary,
+    gallery: (fields.gallery || "").split("\n").filter(Boolean),
+  }));
   const [filters, setFilters] = useState({
     company: all,
     sector: all,
@@ -31,12 +53,12 @@ function WorkPage() {
     status: all,
   });
 
-  const unique = (key) => Array.from(new Set(projects.map((p) => p[key])));
+  const unique = (key) => Array.from(new Set(liveProjects.map((p) => p[key])));
   const companyOptions = companies
-    .filter((c) => projects.some((p) => p.companySlug === c.slug))
+    .filter((c) => liveProjects.some((p) => p.companySlug === c.slug))
     .map((c) => ({ value: c.slug, label: c.name }));
 
-  const visible = projects.filter(
+  const visible = liveProjects.filter(
     (p) =>
       (filters.company === all || p.companySlug === filters.company) &&
       (filters.sector === all || p.sector === filters.sector) &&
@@ -59,9 +81,9 @@ function WorkPage() {
         image={IMG.candeur}
         imageAlt="Residential tower at blue hour"
         meta={[
-          { label: "References", value: `${projects.length}` },
-          { label: "Companies involved", value: `${new Set(projects.map((p) => p.companySlug)).size}` },
-          { label: "Sectors", value: `${new Set(projects.map((p) => p.sector)).size}` },
+          { label: "References", value: `${liveProjects.length}` },
+          { label: "Companies involved", value: `${new Set(liveProjects.map((p) => p.companySlug)).size}` },
+          { label: "Sectors", value: `${new Set(liveProjects.map((p) => p.sector)).size}` },
         ]}
       />
 
@@ -135,7 +157,7 @@ function WorkPage() {
           </div>
 
           <p className="mt-5 font-mono text-[10px] uppercase tracking-[0.16em] text-slate">
-            {visible.length} of {projects.length} projects
+            {visible.length} of {liveProjects.length} projects
           </p>
 
           {visible.length === 0 ? (

@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import PageHero from "@/components/site/PageHero";
 import Reveal from "@/components/site/Reveal";
 import { insights } from "@/data/catalogue";
+import { applyPublishedContent, usePublishedContent } from "@/lib/site-preview";
 
 export const Route = createFileRoute("/_site/insights")({
   component: InsightsPage,
@@ -18,6 +19,24 @@ export const Route = createFileRoute("/_site/insights")({
 });
 
 function InsightsPage() {
+  const publishedInsights = usePublishedContent("news");
+  const liveInsights = applyPublishedContent(insights, publishedInsights, "news", (post) => `insight-${post.id}`, (post, fields) => ({
+    ...post,
+    title: fields.title,
+    category: fields.category,
+    date: fields.date,
+    read: fields.read,
+    excerpt: fields.excerpt,
+    body: fields.content.split(/\n{2,}/).filter(Boolean),
+  }), (fields) => ({
+    id: fields.id,
+    category: fields.category,
+    date: fields.date,
+    read: fields.read,
+    title: fields.title,
+    excerpt: fields.excerpt,
+    body: (fields.content || "").split(/\n{2,}/).filter(Boolean),
+  }));
   return (
     <>
       <PageHero
@@ -25,7 +44,7 @@ function InsightsPage() {
         title="Notes from the plant and the site."
         intro="Short technical and editorial pieces on materials, concrete technology and infrastructure delivery — written by the group's operating teams. Company announcements are published here once approved."
         meta={[
-          { label: "Articles", value: `${insights.length}` },
+          { label: "Articles", value: `${liveInsights.length}` },
           { label: "Topics", value: "Materials · Engineering · Group" },
         ]}
       />
@@ -37,7 +56,7 @@ function InsightsPage() {
               <div className="lg:sticky lg:top-28">
                 <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate">In this issue</p>
                 <ul className="mt-4 space-y-3">
-                  {insights.map((post) => (
+                  {liveInsights.map((post) => (
                     <li key={post.id}>
                       <a
                         href={`#${post.id}`}
@@ -65,7 +84,7 @@ function InsightsPage() {
 
             <div className="lg:col-span-9">
               <div className="space-y-14">
-                {insights.map((post, i) => (
+                {liveInsights.map((post, i) => (
                   <Reveal key={post.id} as="article" className="scroll-mt-28">
                     <div id={post.id} className="border-t border-ink/15 pt-6">
                       <div className="flex flex-wrap items-center gap-3 font-mono text-[10px] uppercase tracking-[0.16em] text-slate">

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import PageHero from "@/components/site/PageHero";
-import { CONTACT } from "@/data/group";
+import { usePublicContact } from "@/lib/site-preview";
 
 export const Route = createFileRoute("/_site/privacy")({
   component: PrivacyPage,
@@ -39,11 +39,12 @@ const sections = [
   },
   {
     title: "Your choices",
-    body: `You can request access, correction or deletion of the information you submitted by writing to ${CONTACT.email}. We will respond within a reasonable period, subject to statutory retention obligations.`,
+    body: "You can request access, correction or deletion of the information you submitted by writing to the contact address below. We will respond within a reasonable period, subject to statutory retention obligations.",
   },
 ];
 
 function PrivacyPage() {
+  const contact = usePublicContact();
   return (
     <>
       <PageHero
@@ -71,7 +72,7 @@ function PrivacyPage() {
 
             <div className="border border-ink/12 bg-concrete/50 p-5">
               <p className="text-[12px] leading-relaxed text-slate">
-                Contact for privacy requests: {CONTACT.email} · {CONTACT.phone}. Office address is pending
+                Contact for privacy requests: {contact.email} · {contact.phone}. Office address is pending
                 publication. This document does not create rights beyond those available under applicable
                 Indian law.
               </p>

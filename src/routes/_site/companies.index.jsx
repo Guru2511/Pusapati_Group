@@ -5,6 +5,7 @@ import PageHero from "@/components/site/PageHero";
 import Reveal from "@/components/site/Reveal";
 import { companies, engines, companiesByEngine } from "@/data/group";
 import { projects } from "@/data/catalogue";
+import { applyPublishedContent, usePublishedContent } from "@/lib/site-preview";
 
 export const Route = createFileRoute("/_site/companies/")({
   component: CompaniesPage,
@@ -21,9 +22,38 @@ export const Route = createFileRoute("/_site/companies/")({
 });
 
 function CompaniesPage() {
-  const operatingCount = companies.filter((company) => company.status === "Operating").length;
-  const plannedCount = companies.filter((company) => company.status.startsWith("Planned")).length;
-  const proposedCount = companies.filter((company) => company.status.startsWith("Proposed")).length;
+  const publishedCompanies = usePublishedContent("companies");
+  const liveCompanies = applyPublishedContent(companies, publishedCompanies, "companies", (company) => `company-${company.slug}`, (company, fields) => ({
+    ...company,
+    slug: fields.slug || company.slug,
+    name: fields.name,
+    engine: fields.engine || company.engine,
+    status: fields.status,
+    tagline: fields.tagline,
+    intro: fields.description,
+    services: fields.services.split("\n").filter(Boolean),
+    products: fields.products.split("\n").filter(Boolean),
+    highlights: fields.highlights.split("\n").filter(Boolean),
+    groupConnection: fields.groupConnection,
+    propertyDetails: (fields.propertyDetails || "").split("\n").filter(Boolean).map((line) => {
+      const [label, ...value] = line.split(" — ");
+      return { label, value: value.join(" — ") };
+    }),
+    image: fields.image,
+  }), (fields) => ({
+    ...fields,
+    slug: fields.slug,
+    services: (fields.services || "").split("\n").filter(Boolean),
+    products: (fields.products || "").split("\n").filter(Boolean),
+    highlights: (fields.highlights || "").split("\n").filter(Boolean),
+    propertyDetails: (fields.propertyDetails || "").split("\n").filter(Boolean).map((line) => {
+      const [label, ...value] = line.split(" — ");
+      return { label, value: value.join(" — ") };
+    }),
+  }));
+  const operatingCount = liveCompanies.filter((company) => company.status === "Operating").length;
+  const plannedCount = liveCompanies.filter((company) => company.status.startsWith("Planned")).length;
+  const proposedCount = liveCompanies.filter((company) => company.status.startsWith("Proposed")).length;
 
   return (
     <>
@@ -56,7 +86,7 @@ function CompaniesPage() {
       </div>
 
       {engines.map((engine, ei) => {
-        const list = companiesByEngine(engine.id);
+        const list = liveCompanies.filter((company) => company.engine === engine.id);
         return (
           <section
             key={engine.id}

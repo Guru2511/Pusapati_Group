@@ -1,5 +1,4 @@
 import { secrets } from "base44:runtime";
-import { CONTACT } from "@/data/group";
 
 async function requiredSecret(name) {
   const value = await secrets.get(name);
@@ -17,63 +16,53 @@ function firstValue(payload, keys) {
   return "Not provided";
 }
 
-function formatWhatsApp(type, payload) {
-  const details = [
-    `New ${type} submission`,
-    `Name: ${firstValue(payload, ["name", "contact_name", "full_name", "company_name"])}`,
-    `Phone: ${firstValue(payload, ["phone"])}`,
-    `Email: ${firstValue(payload, ["email"])}`,
-    `Details: ${firstValue(payload, ["requirement", "description", "cover_note", "message", "areas_of_interest"])}`,
-  ];
+function getWhatsAppDetails(payload) {
+  if (Array.isArray(payload.requirement_items)) {
+    return payload.requirement_items
+      .map((item, index) => `${index + 1}. ${item.category}: ${item.requirement}`)
+      .join(" | ")
+      .slice(0, 300);
+  }
 
-  return details.join("\n").slice(0, 900);
+  return firstValue(payload, [
+    "requirement",
+    "description",
+    "cover_note",
+    "message",
+    "areas_of_interest",
+    "interest",
+    "category",
+    "role",
+  ]).slice(0, 300);
 }
 
 async function sendWhatsApp(type, payload) {
-  const accessToken = await requiredSecret("WHATSAPP_ACCESS_TOKEN");
-  const phoneNumberId = await requiredSecret("WHATSAPP_PHONE_NUMBER_ID");
-  const apiVersion = await requiredSecret("WHATSAPP_API_VERSION");
-  const templateName = await requiredSecret("WHATSAPP_TEMPLATE_NAME");
-  const templateLanguage = (await secrets.get("WHATSAPP_TEMPLATE_LANGUAGE")) || "en_US";
+  const webhookUrl = await requiredSecret("N8N_WEBHOOK_URL");
+  const authKey = await requiredSecret("N8N_WEBHOOK_AUTH_KEY");
+  const url = new URL(webhookUrl);
 
-  if (!/^\d+$/.test(phoneNumberId)) {
-    throw new Error("WHATSAPP_PHONE_NUMBER_ID must contain only digits.");
-  }
-  if (!/^v\d+\.\d+$/.test(apiVersion)) {
-    throw new Error("WHATSAPP_API_VERSION must use the format v##.#.");
-  }
-  if (!/^[a-z0-9_]+$/.test(templateName)) {
-    throw new Error("WHATSAPP_TEMPLATE_NAME must be a lowercase template name.");
+  if (url.protocol !== "https:") {
+    throw new Error("N8N_WEBHOOK_URL must use HTTPS.");
   }
 
-  const response = await fetch(
-    `https://graph.facebook.com/${apiVersion}/${phoneNumberId}/messages`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        messaging_product: "whatsapp",
-        to: CONTACT.phone.replace(/\D/g, ""),
-        type: "template",
-        template: {
-          name: templateName,
-          language: { code: templateLanguage },
-          components: [
-            {
-              type: "body",
-              parameters: [{ type: "text", text: formatWhatsApp(type, payload) }],
-            },
-          ],
-        },
-      }),
-    }
-  );
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-pusapati-alert-key": authKey,
+    },
+    body: JSON.stringify({
+      type: type.slice(0, 40),
+      name: firstValue(payload, ["name", "contact_name", "full_name", "company_name"]).slice(0, 80),
+      phone: firstValue(payload, ["phone"]).slice(0, 30),
+      email: firstValue(payload, ["email"]).slice(0, 100),
+      details: getWhatsAppDetails(payload),
+    }),
+    signal: AbortSignal.timeout(10_000),
+  });
 
   if (!response.ok) {
-    throw new Error(`WhatsApp Cloud API returned HTTP ${response.status}.`);
+    throw new Error(`n8n WhatsApp webhook returned HTTP ${response.status}.`);
   }
 }
 

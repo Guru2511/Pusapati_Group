@@ -5,6 +5,7 @@ import Reveal from "@/components/site/Reveal";
 import { PrimaryLink, TextLink } from "@/components/site/CTA";
 import { companies, companyBySlug, engineById } from "@/data/group";
 import { projects } from "@/data/catalogue";
+import { applyPublishedContent, usePublishedContent } from "@/lib/site-preview";
 
 export const Route = createFileRoute("/_site/companies/$company")({
   component: CompanyPage,
@@ -21,13 +22,42 @@ export const Route = createFileRoute("/_site/companies/$company")({
 
 function CompanyPage() {
   const { company: slug } = Route.useParams();
-  const company = companyBySlug(slug);
+  const publishedCompanies = usePublishedContent("companies");
+  const liveCompanies = applyPublishedContent(companies, publishedCompanies, "companies", (record) => `company-${record.slug}`, (record, fields) => ({
+    ...record,
+    slug: fields.slug || record.slug,
+    name: fields.name,
+    engine: fields.engine || record.engine,
+    status: fields.status,
+    tagline: fields.tagline,
+    intro: fields.description,
+    services: fields.services.split("\n").filter(Boolean),
+    products: fields.products.split("\n").filter(Boolean),
+    highlights: fields.highlights.split("\n").filter(Boolean),
+    groupConnection: fields.groupConnection,
+    propertyDetails: (fields.propertyDetails || "").split("\n").filter(Boolean).map((line) => {
+      const [label, ...value] = line.split(" — ");
+      return { label, value: value.join(" — ") };
+    }),
+    image: fields.image,
+  }), (fields) => ({
+    ...fields,
+    slug: fields.slug,
+    services: (fields.services || "").split("\n").filter(Boolean),
+    products: (fields.products || "").split("\n").filter(Boolean),
+    highlights: (fields.highlights || "").split("\n").filter(Boolean),
+    propertyDetails: (fields.propertyDetails || "").split("\n").filter(Boolean).map((line) => {
+      const [label, ...value] = line.split(" — ");
+      return { label, value: value.join(" — ") };
+    }),
+  }));
+  const company = liveCompanies.find((record) => record.slug === slug) || companyBySlug(slug);
   if (!company) throw notFound();
 
   const engine = engineById(company.engine);
   const related = projects.filter((p) => p.companySlug === company.slug);
-  const index = companies.findIndex((c) => c.slug === company.slug);
-  const next = companies[(index + 1) % companies.length];
+  const index = liveCompanies.findIndex((c) => c.slug === company.slug);
+  const next = liveCompanies[(index + 1) % liveCompanies.length];
 
   return (
     <>

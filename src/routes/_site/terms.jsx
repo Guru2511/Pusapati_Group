@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import PageHero from "@/components/site/PageHero";
-import { CONTACT } from "@/data/group";
+import { usePublicContact } from "@/lib/site-preview";
 
 export const Route = createFileRoute("/_site/terms")({
   component: TermsPage,
@@ -44,6 +44,7 @@ const sections = [
 ];
 
 function TermsPage() {
+  const contact = usePublicContact();
   return (
     <>
       <PageHero
@@ -71,7 +72,7 @@ function TermsPage() {
 
             <div className="border border-ink/12 bg-concrete/50 p-5">
               <p className="text-[12px] leading-relaxed text-slate">
-                Questions about these terms: {CONTACT.email}. Governing law and jurisdiction will be
+                Questions about these terms: {contact.email}. Governing law and jurisdiction will be
                 confirmed on legal review.
               </p>
             </div>

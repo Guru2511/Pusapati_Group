@@ -2,7 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowUpRight, Clock, Mail, MapPin, MessageCircle, Phone } from "lucide-react";
 import PageHero from "@/components/site/PageHero";
 import ContactForm from "@/components/forms/ContactForm";
-import { companies, CONTACT } from "@/data/group";
+import { companies } from "@/data/group";
+import { usePublicContact } from "@/lib/site-preview";
 
 export const Route = createFileRoute("/_site/contact")({
   component: ContactPage,
@@ -41,6 +42,7 @@ const companyEnquiryCategories = {
 };
 
 function ContactPage() {
+  const contact = usePublicContact();
   return (
     <>
       <PageHero
@@ -49,7 +51,7 @@ function ContactPage() {
         intro="One enquiry desk routes every conversation to the right company — materials, trade, construction, villas or investment. We respond within one business day, Monday to Saturday."
         meta={[
           { label: "Enquiries", value: "1 business day" },
-          { label: "Working hours", value: "Mon–Sat, 9:30–18:30 IST" },
+          { label: "Working hours", value: contact.hours },
           { label: "Base", value: "Hyderabad, India" },
         ]}
       />
@@ -66,12 +68,12 @@ function ContactPage() {
                   <div>
                     <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-slate">Phone</p>
                     <a
-                      href={`tel:${CONTACT.phone.replace(/\s/g, "")}`}
+                      href={`tel:${contact.phone.replace(/\s/g, "")}`}
                       className="mt-1 block text-[16px] font-medium text-ink hover:text-orange"
                     >
-                      {CONTACT.phone}
+                      {contact.phone}
                     </a>
-                    <p className="mt-1 text-[11px] text-slate/70">{CONTACT.phoneNote}</p>
+                    <p className="mt-1 text-[11px] text-slate/70">{contact.phoneNote}</p>
                   </div>
                 </div>
 
@@ -80,12 +82,12 @@ function ContactPage() {
                   <div>
                     <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-slate">Email</p>
                     <a
-                      href={`mailto:${CONTACT.email}`}
+                      href={`mailto:${contact.email}`}
                       className="mt-1 block text-[16px] font-medium text-ink hover:text-orange"
                     >
-                      {CONTACT.email}
+                      {contact.email}
                     </a>
-                    <p className="mt-1 text-[11px] text-slate/70">{CONTACT.emailNote}</p>
+                    <p className="mt-1 text-[11px] text-slate/70">{contact.emailNote}</p>
                   </div>
                 </div>
 
@@ -94,7 +96,7 @@ function ContactPage() {
                   <div>
                     <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-slate">Office</p>
                     <address className="mt-1 space-y-0.5 text-[14px] not-italic leading-relaxed text-ink">
-                      {CONTACT.addressLines.map((l) => (
+                      {contact.addressLines.map((l) => (
                         <span key={l} className="block">
                           {l}
                         </span>
@@ -107,13 +109,13 @@ function ContactPage() {
                   <Clock className="mt-0.5 h-4 w-4 shrink-0 text-orange" aria-hidden="true" />
                   <div>
                     <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-slate">Hours</p>
-                    <p className="mt-1 text-[14px] text-ink">{CONTACT.hours}</p>
+                    <p className="mt-1 text-[14px] text-ink">{contact.hours}</p>
                   </div>
                 </div>
               </div>
 
               <a
-                href={CONTACT.whatsapp}
+                href={contact.whatsapp}
                 target="_blank"
                 rel="noreferrer noopener"
                 className="mt-4 flex min-h-[52px] items-center justify-center gap-2.5 bg-[#128C7E] px-6 text-[11px] font-semibold uppercase tracking-[0.14em] text-white transition-opacity hover:opacity-90"

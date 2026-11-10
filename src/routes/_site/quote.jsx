@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Clock, Mail, Phone } from "lucide-react";
 import QuoteForm from "@/components/forms/QuoteForm";
-import { CONTACT } from "@/data/group";
+import { usePublicContact } from "@/lib/site-preview";
 
 const CATEGORY_IDS = [
   "concrete",
@@ -47,6 +47,7 @@ const steps = [
 
 function QuotePage() {
   const { category } = Route.useSearch();
+  const contact = usePublicContact();
 
   return (
     <>
@@ -60,8 +61,8 @@ function QuotePage() {
             Tell us what you're building.
           </h1>
           <p className="mt-4 max-w-xl text-[16px] leading-relaxed text-slate">
-            One form, seven requirement types. Choose what you need and the fields adapt — volumes, pour
-            conditions, shipment details or a villa site visit.
+            One form, seven requirement types. Add each requirement you need and its fields adapt — volumes,
+            pour conditions, shipment details or a villa site visit.
           </p>
         </div>
       </section>
@@ -98,20 +99,20 @@ function QuotePage() {
                   </p>
                   <ul className="mt-4 space-y-3 text-[14px]">
                     <li>
-                      <a href={`tel:${CONTACT.phone.replace(/\s/g, "")}`} className="flex items-center gap-2.5 text-ink hover:text-orange">
+                      <a href={`tel:${contact.phone.replace(/\s/g, "")}`} className="flex items-center gap-2.5 text-ink hover:text-orange">
                         <Phone className="h-4 w-4 text-orange" aria-hidden="true" />
-                        {CONTACT.phone}
+                        {contact.phone}
                       </a>
                     </li>
                     <li>
-                      <a href={`mailto:${CONTACT.email}`} className="flex items-center gap-2.5 text-ink hover:text-orange">
+                      <a href={`mailto:${contact.email}`} className="flex items-center gap-2.5 text-ink hover:text-orange">
                         <Mail className="h-4 w-4 text-orange" aria-hidden="true" />
-                        {CONTACT.email}
+                        {contact.email}
                       </a>
                     </li>
                     <li className="flex items-center gap-2.5 text-slate">
                       <Clock className="h-4 w-4 text-orange" aria-hidden="true" />
-                      {CONTACT.hours}
+                      {contact.hours}
                     </li>
                   </ul>
                   <p className="mt-4 text-[11px] leading-relaxed text-slate/70">

@@ -5,6 +5,7 @@ import Reveal from "@/components/site/Reveal";
 import Counter from "@/components/site/Counter";
 import InvestorForm from "@/components/forms/InvestorForm";
 import { engines, companiesByEngine, stats, IMG } from "@/data/group";
+import { applyPublishedContent, usePublishedContent } from "@/lib/site-preview";
 
 export const Route = createFileRoute("/_site/investors")({
   component: InvestorsPage,
@@ -44,19 +45,30 @@ const governance = [
 ];
 
 function InvestorsPage() {
+  const publishedInvestorInfo = usePublishedContent("investor-info");
+  const investorRecords = applyPublishedContent(
+    [{ id: "investor-overview" }],
+    publishedInvestorInfo,
+    "investor-info",
+    (record) => record.id,
+    (record, fields) => ({ ...record, ...fields }),
+  );
+  const investorInfo = investorRecords[0] || {};
+  const investorOverviewDeleted = publishedInvestorInfo.some((record) => record.id === "investor-overview" && record.deleted);
   return (
     <>
+      {!investorOverviewDeleted && <>
       <PageHero
         eyebrow="Investors"
-        title="An integrated building group, built to compound."
-        intro="Four engines, eight companies and one material chain. This page summarises the group's structure and achievements for investors. No financial projections, returns or forecasts are published here."
+        title={investorInfo.heroTitle || "An integrated building group, built to compound."}
+        intro={investorInfo.heroIntroduction || "Four engines, eight companies and one material chain. This page summarises the group's structure and achievements for investors. No financial projections, returns or forecasts are published here."}
         image={IMG.plant}
         imageAlt="Industrial plant at golden hour"
         meta={[
-          { label: "Entities", value: "8 companies" },
-          { label: "Engines", value: "4" },
-          { label: "Horizon", value: "Vision 2032" },
-          { label: "Reporting", value: "On request" },
+          { label: "Entities", value: investorInfo.entityCount || "8 companies" },
+          { label: "Engines", value: investorInfo.engineCount || "4" },
+          { label: "Horizon", value: investorInfo.horizon || "Vision 2032" },
+          { label: "Reporting", value: investorInfo.reporting || "On request" },
         ]}
       />
 
@@ -66,27 +78,19 @@ function InvestorsPage() {
             <div className="lg:col-span-5">
               <p className="eyebrow">Group overview</p>
               <h2 className="mt-4 font-display text-[clamp(1.8rem,3.2vw,2.6rem)] font-semibold leading-[1.06] tracking-[-0.03em] text-ink">
-                Industrial cash flow, connected.
+                {investorInfo.overviewTitle || "Industrial cash flow, connected."}
               </h2>
             </div>
             <div className="lg:col-span-7">
               <div className="space-y-5 text-[15px] leading-[1.8] text-slate">
-                <p>
-                  Pusapati Group operates across the construction value chain: crushed aggregates and
-                  manufactured sand, GGBS, engineered ready-mix concrete, multi-category material trade,
-                  contracting and hospitality villas. Edge colocation is planned as the fourth engine.
-                </p>
-                <p>
-                  Because the material businesses supply the contracting and villa businesses, group demand
-                  supports plant utilisation, and margin is retained at more than one point in the chain.
-                  Cross-company governance and a shared quality system are the mechanisms that keep the model
-                  coherent.
-                </p>
+                <p>{investorInfo.overviewFirst || "Pusapati Group operates across the construction value chain: crushed aggregates and manufactured sand, GGBS, engineered ready-mix concrete, multi-category material trade, contracting and hospitality villas. Edge colocation is planned as the fourth engine."}</p>
+                <p>{investorInfo.overviewSecond || "Because the material businesses supply the contracting and villa businesses, group demand supports plant utilisation, and margin is retained at more than one point in the chain. Cross-company governance and a shared quality system are the mechanisms that keep the model coherent."}</p>
               </div>
             </div>
           </div>
         </div>
       </section>
+      </>}
 
       <section className="border-y border-ink/10 bg-concrete">
         <div className="container-x py-14 lg:py-16">

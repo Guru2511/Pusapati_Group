@@ -4,6 +4,7 @@ import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion
 import { ArrowUpRight } from "lucide-react";
 import { Image } from "@/components/ui/image";
 import { IMG } from "@/data/group";
+import { usePublishedContent } from "@/lib/site-preview";
 
 const slides = [
   { src: IMG.quarry, label: "Quarry & aggregates", kicker: "Engine 01" },
@@ -24,6 +25,8 @@ const ease = [0.16, 1, 0.3, 1];
 export default function Hero() {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [previewHero] = usePublishedContent("home");
+  const previewFields = previewHero?.id === "home-hero" ? previewHero.fields : null;
   const ref = useRef(null);
   const reduce = useReducedMotion();
 
@@ -71,19 +74,23 @@ export default function Hero() {
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-orange" />
               </span>
               <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink/70">
-                Eight companies · Four engines
+                {previewFields?.eyebrow || "Eight companies · Four engines"}
               </span>
             </motion.div>
 
             <h1 className="mt-6 font-heading text-[clamp(2.55rem,6.2vw,4.9rem)] font-semibold leading-[0.92] tracking-[-0.045em] text-ink">
-              {line("Building", 0.05)}
-              {line("foundations,", 0.13)}
-              {line(
-                <>
-                  <span className="text-orange">forging</span> futures.
-                </>,
-                0.21
-              )}
+              {previewFields?.title
+                ? line(previewFields.title, 0.05)
+                : <>
+                    {line("Building", 0.05)}
+                    {line("foundations,", 0.13)}
+                    {line(
+                      <>
+                        <span className="text-orange">forging</span> futures.
+                      </>,
+                      0.21
+                    )}
+                  </>}
             </h1>
 
             <motion.p
@@ -92,8 +99,8 @@ export default function Hero() {
               transition={{ duration: 0.9, delay: 0.35, ease }}
               className="mt-6 max-w-[47ch] text-[16px] leading-[1.7] text-slate sm:text-[17px]"
             >
-              From the quarry to the skyline to the stay: eight Pusapati Group companies make, supply,
-              build and manage what India builds next.
+              {previewFields?.introduction ||
+                "From the quarry to the skyline to the stay: eight Pusapati Group companies make, supply, build and manage what India builds next."}
             </motion.p>
 
             <motion.div

@@ -8,6 +8,16 @@ const text = (max) => z.string().trim().max(max).optional().default("");
 const required = (max) => z.string().trim().min(1).max(max);
 const optionalDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).or(z.literal("")).optional().default("");
 const optionalTime = z.string().regex(/^\d{2}:\d{2}$/).or(z.literal("")).optional().default("");
+const enquiryCategory = z.enum([
+  "concrete",
+  "aggregates",
+  "ggbs",
+  "construction_materials",
+  "villas",
+  "exports",
+  "other",
+  "general",
+]);
 const email = z
   .string()
   .trim()
@@ -16,22 +26,8 @@ const email = z
   .optional()
   .default("");
 
-const enquiry = z.object({
-  type: z.literal("enquiry"),
-  name: required(120),
-  phone: required(30),
-  email: email,
-  company: text(160),
-  category: z.enum([
-    "concrete",
-    "aggregates",
-    "ggbs",
-    "construction_materials",
-    "villas",
-    "exports",
-    "other",
-    "general",
-  ]),
+const requirementItem = z.object({
+  category: enquiryCategory,
   location: text(160),
   interest: text(160),
   quantity: text(120),
@@ -44,6 +40,28 @@ const enquiry = z.object({
     .optional()
     .default(""),
   requirement: required(3000),
+});
+
+const enquiry = z.object({
+  type: z.literal("enquiry"),
+  name: required(120),
+  phone: required(30),
+  email: email,
+  company: text(160),
+  category: enquiryCategory,
+  location: text(160),
+  interest: text(160),
+  quantity: text(120),
+  timeline: text(120),
+  pour_date: optionalDate,
+  pour_time: optionalTime,
+  pump_required: z.enum(["yes", "no", "unsure"]).optional().default("unsure"),
+  incoterms: z
+    .enum(["EXW", "FCA", "FOB", "CFR", "CIF", "DAP", "Other / to be agreed", ""])
+    .optional()
+    .default(""),
+  requirement: required(3000),
+  requirement_items: z.array(requirementItem).min(1).max(20).optional(),
   source_page: text(120),
 });
 
@@ -82,6 +100,23 @@ const career = z.object({
   portfolio_url: text(300),
   cover_note: text(2500),
   is_internship: z.boolean().optional().default(false),
+  cv_pathname: z.string().regex(/^career-cvs\/[a-f0-9-]{36}\.(pdf|doc|docx)$/).optional(),
+  cv_filename: z.string().trim().min(1).max(255).optional(),
+  cv_content_type: z.enum([
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ]).optional(),
+  cv_size: z.number().int().min(1).max(5 * 1024 * 1024).optional(),
+}).superRefine((data, context) => {
+  const cvFields = [data.cv_pathname, data.cv_filename, data.cv_content_type, data.cv_size];
+  if (cvFields.some((value) => value !== undefined) && cvFields.some((value) => value === undefined)) {
+    context.addIssue({
+      code: "custom",
+      message: "CV metadata must be provided together.",
+      path: ["cv_pathname"],
+    });
+  }
 });
 
 const investor = z.object({

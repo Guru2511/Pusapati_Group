@@ -5,19 +5,30 @@ import { Image } from "@/components/ui/image";
 import Reveal from "@/components/site/Reveal";
 import { projects } from "@/data/catalogue";
 import { companyBySlug } from "@/data/group";
-
-const featuredProjectSlugs = [
-  "candeur-skyline",
-  "pooja-crafted-homes",
-  "shamshabad-data-centre",
-  "anaya-exclusive-villas",
-];
+import { applyPublishedContent, usePublishedContent } from "@/lib/site-preview";
 
 export default function ProjectsSection() {
-  const featuredProjects = featuredProjectSlugs
-    .map((slug) => projects.find((project) => project.slug === slug))
-    .filter(Boolean);
-
+  const publishedProjects = usePublishedContent("projects");
+  const liveProjects = applyPublishedContent(projects, publishedProjects, "projects", (project) => `project-${project.slug}`, (project, fields) => ({
+    ...project,
+    slug: fields.slug || project.slug,
+    name: fields.name,
+    client: fields.client,
+    location: fields.location,
+    sector: fields.sector,
+    companySlug: fields.companySlug || project.companySlug,
+    status: fields.status,
+    scope: fields.scope,
+    summary: fields.summary,
+    overview: fields.overview || fields.summary,
+    image: fields.image,
+    gallery: (fields.gallery || "").split("\n").filter(Boolean),
+  }), (fields) => ({
+    ...fields,
+    companySlug: fields.companySlug || "pipl-concrete",
+    overview: fields.overview || fields.summary,
+    gallery: (fields.gallery || "").split("\n").filter(Boolean),
+  }));
   return (
     <section className="border-t border-ink/10 bg-paper">
       <div className="container-x section-y">
@@ -25,12 +36,12 @@ export default function ProjectsSection() {
           <div>
             <div className="flex items-center gap-3">
               <span className="h-1.5 w-1.5 rounded-full bg-orange" aria-hidden="true" />
-              <span className="eyebrow">Featured projects</span>
+              <span className="eyebrow">Projects across the group</span>
             </div>
             <h2 className="mt-5 max-w-[22ch] font-heading text-[clamp(2.1rem,4.4vw,3.6rem)] font-semibold leading-[1] tracking-[-0.04em] text-ink">
-              Work that carries
+              Every project,
               <br />
-              the group's name.
+              in one place.
             </h2>
           </div>
           <Link
@@ -42,8 +53,12 @@ export default function ProjectsSection() {
           </Link>
         </div>
 
-        <div className="mt-12 grid gap-6 md:grid-cols-2 md:gap-7">
-          {featuredProjects.map((p, i) => {
+        <p className="mt-4 max-w-2xl text-sm leading-6 text-slate">
+          Browse the complete project list, including active work, delivered references, and upcoming projects.
+        </p>
+
+        <div className="mt-12 grid gap-6 md:grid-cols-2 md:gap-7 xl:grid-cols-3">
+          {liveProjects.map((p, i) => {
             const company = companyBySlug(p.companySlug);
             return (
               <Reveal key={p.slug} delay={i * 90} className={i % 2 === 1 ? "md:mt-14" : ""}>

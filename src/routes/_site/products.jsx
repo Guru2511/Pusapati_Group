@@ -6,6 +6,7 @@ import Reveal from "@/components/site/Reveal";
 import { PrimaryLink } from "@/components/site/CTA";
 import { productCategories, qualityStages } from "@/data/catalogue";
 import { IMG } from "@/data/group";
+import { applyPublishedContent, usePublishedContent } from "@/lib/site-preview";
 
 export const Route = createFileRoute("/_site/products")({
   component: ProductsPage,
@@ -30,6 +31,34 @@ const quoteCategory = {
 };
 
 function ProductsPage() {
+  const publishedProducts = usePublishedContent("products");
+  const publishedQualityStages = usePublishedContent("quality");
+  const liveProductCategories = applyPublishedContent(productCategories, publishedProducts, "products", (category) => `product-${category.id}`, (category, fields) => ({
+    ...category,
+    id: fields.id || category.id,
+    name: fields.name,
+    accent: fields.accent || category.accent,
+    intro: fields.introduction,
+    image: fields.image,
+    items: fields.products.split("\n").filter(Boolean).map((line) => {
+      const [name, spec = "", use = ""] = line.split(" — ");
+      return { name, spec, use };
+    }),
+  }), (fields) => ({
+    ...fields,
+    accent: fields.accent || "#E2701B",
+    intro: fields.introduction,
+    items: (fields.products || "").split("\n").filter(Boolean).map((line) => {
+      const [name, spec = "", use = ""] = line.split(" — ");
+      return { name, spec, use };
+    }),
+  }));
+  const liveQualityStages = applyPublishedContent(qualityStages, publishedQualityStages, "quality", (stage) => `quality-${stage.index}`, (stage, fields) => ({
+    ...stage,
+    index: fields.index,
+    title: fields.title,
+    body: fields.description,
+  }), (fields) => ({ index: fields.index, title: fields.title, body: fields.description }));
   return (
     <>
       <PageHero
@@ -39,7 +68,7 @@ function ProductsPage() {
         image={IMG.concrete}
         imageAlt="Wet concrete being poured"
         meta={[
-          { label: "Categories", value: `${productCategories.length}` },
+          { label: "Categories", value: `${liveProductCategories.length}` },
           { label: "Inspection stages", value: "3" },
           { label: "Lab", value: "In-house" },
           { label: "Datasheets", value: "On request" },
@@ -48,7 +77,7 @@ function ProductsPage() {
 
       <div className="border-b border-ink/10 bg-paper">
         <div className="container-x flex flex-wrap gap-2 py-4">
-          {productCategories.map((c) => (
+          {liveProductCategories.map((c) => (
             <a
               key={c.id}
               href={`#${c.id}`}
@@ -61,7 +90,7 @@ function ProductsPage() {
         </div>
       </div>
 
-      {productCategories.map((cat, i) => (
+      {liveProductCategories.map((cat, i) => (
         <section
           key={cat.id}
           id={cat.id}
@@ -169,7 +198,7 @@ function ProductsPage() {
 
               <div className="lg:col-span-7">
                 <div className="grid gap-px bg-paper/10">
-                  {qualityStages.map((s, i) => (
+                  {liveQualityStages.map((s, i) => (
                     <Reveal key={s.index} delay={i * 70} className="bg-ink p-6">
                       <div className="flex items-baseline gap-4">
                         <span className="font-mono text-[11px] tracking-[0.16em] text-orange">{s.index}</span>

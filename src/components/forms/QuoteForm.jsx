@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { Boxes, Home, Layers, MessageSquare, Mountain, Ship, Truck } from "lucide-react";
 import { useIntake } from "@/hooks/useIntake";
 import {
@@ -22,6 +22,7 @@ const categories = [
   { id: "exports", label: "International exports", blurb: "Proposed export lines", icon: Ship },
   { id: "other", label: "Other enquiries", blurb: "Partnerships & general", icon: MessageSquare },
 ];
+const MAX_REQUIREMENT_ITEMS = 20;
 
 const timelines = [
   "Immediate (within 1 week)",
@@ -116,31 +117,60 @@ const extras = {
 };
 
 export default function QuoteForm({ initialCategory = "concrete" }) {
-  const [category, setCategory] = useState(initialCategory);
-  const [values, setValues] = useState({});
+  const nextItemId = useRef(2);
+  const [requirementItems, setRequirementItems] = useState([
+    { id: "1", category: initialCategory, values: {} },
+  ]);
   const { state, error, notificationWarning, run, reset, pending, done } = useIntake();
 
-  const set = (name) => (e) => setValues((v) => ({ ...v, [name]: e.target.value }));
+  const setItemValue = (itemId, name, value) =>
+    setRequirementItems((items) =>
+      items.map((item) =>
+        item.id === itemId ? { ...item, values: { ...item.values, [name]: value } } : item
+      )
+    );
+
+  const addRequirementItem = () => {
+    setRequirementItems((items) => [
+      ...items,
+      { id: String(nextItemId.current++), category: initialCategory, values: {} },
+    ]);
+  };
+
+  const removeRequirementItem = (itemId) => {
+    if (
+      requirementItems.length <= 1 ||
+      !window.confirm("Remove this requirement item? Its entered details will be lost.")
+    ) {
+      return;
+    }
+    setRequirementItems((items) => items.filter((item) => item.id !== itemId));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
+    const submittedItems = requirementItems.map(({ category, values: itemValues }) => ({
+      category,
+      location: String(itemValues.location || ""),
+      interest: String(itemValues.interest || ""),
+      quantity: String(itemValues.quantity || ""),
+      timeline: String(itemValues.timeline || ""),
+      pour_date: String(itemValues.pour_date || ""),
+      pour_time: String(itemValues.pour_time || ""),
+      pump_required: String(itemValues.pump_required || "unsure"),
+      incoterms: String(itemValues.incoterms || ""),
+      requirement: String(itemValues.requirement || ""),
+    }));
+    const firstItem = submittedItems[0];
     await run({
       type: "enquiry",
       name: String(data.get("name") || ""),
       phone: String(data.get("phone") || ""),
       email: String(data.get("email") || ""),
       company: String(data.get("company") || ""),
-      location: String(values.location || ""),
-      interest: String(values.interest || ""),
-      quantity: String(values.quantity || ""),
-      timeline: String(values.timeline || ""),
-      pour_date: String(values.pour_date || ""),
-      pour_time: String(values.pour_time || ""),
-      pump_required: String(values.pump_required || "unsure"),
-      incoterms: String(values.incoterms || ""),
-      requirement: String(data.get("requirement") || ""),
-      category,
+      ...firstItem,
+      requirement_items: submittedItems,
       source_page: "/quote",
     });
   };
@@ -149,10 +179,10 @@ export default function QuoteForm({ initialCategory = "concrete" }) {
     return (
       <SuccessPanel
         title="Enquiry received."
-        body="Your requirement has reached the group enquiry desk. A team member will respond within one business day with specifications, availability and next steps."
+        body="Your requirements have reached the group enquiry desk. A team member will respond within one business day with specifications, availability and next steps."
         warning={notificationWarning}
         onReset={() => {
-          setValues({});
+          setRequirementItems([{ id: String(nextItemId.current++), category: initialCategory, values: {} }]);
           reset();
         }}
         resetLabel="Send another enquiry"
@@ -160,110 +190,148 @@ export default function QuoteForm({ initialCategory = "concrete" }) {
     );
   }
 
-  const fields = extras[category] || [];
-
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
-      <fieldset>
-        <legend className="text-[12px] font-medium uppercase tracking-[0.1em] text-ink/70">
-          01 — What do you need? <span className="text-orange">*</span>
-        </legend>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {categories.map((c) => {
-            const Icon = c.icon;
-            const active = category === c.id;
-            return (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => {
-                  setCategory(c.id);
-                  setValues({});
-                }}
-                aria-pressed={active}
-                className={cn(
-                  "flex items-start gap-3 border p-3.5 text-left transition-colors",
-                  active
-                    ? "border-orange bg-orange/5"
-                    : "border-ink/12 hover:border-ink/30 hover:bg-concrete/50"
-                )}
+      {requirementItems.map((item, index) => {
+        const fields = extras[item.category] || [];
+        const set = (name) => (e) => setItemValue(item.id, name, e.target.value);
+        const itemPrefix = `requirement-${item.id}`;
+
+        return (
+          <section key={item.id} className="space-y-6 border border-ink/12 bg-concrete/20 p-4 sm:p-6">
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-[12px] font-medium uppercase tracking-[0.1em] text-ink/70">
+                {index === 0 ? "01 — What do you need?" : `Requirement item ${index + 1}`}
+                <span className="text-orange"> *</span>
+              </p>
+              {requirementItems.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeRequirementItem(item.id)}
+                  className="text-[12px] font-medium text-slate underline decoration-ink/30 underline-offset-4 transition-colors hover:text-orange"
+                  aria-label={`Remove requirement item ${index + 1}`}
+                >
+                  Remove Item
+                </button>
+              )}
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {categories.map((c) => {
+                const Icon = c.icon;
+                const active = item.category === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() =>
+                      setRequirementItems((items) =>
+                        items.map((current) =>
+                          current.id === item.id ? { ...current, category: c.id } : current
+                        )
+                      )
+                    }
+                    aria-pressed={active}
+                    className={cn(
+                      "flex items-start gap-3 border p-3.5 text-left transition-colors",
+                      active
+                        ? "border-orange bg-orange/5"
+                        : "border-ink/12 hover:border-ink/30 hover:bg-concrete/50"
+                    )}
+                  >
+                    <Icon
+                      className={cn("mt-0.5 h-4 w-4 shrink-0", active ? "text-orange" : "text-slate")}
+                      strokeWidth={1.6}
+                      aria-hidden="true"
+                    />
+                    <span>
+                      <span className="block text-[13px] font-semibold leading-tight text-ink">{c.label}</span>
+                      <span className="mt-0.5 block text-[11px] leading-snug text-slate">{c.blurb}</span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <fieldset className="space-y-4">
+              <legend className="text-[12px] font-medium uppercase tracking-[0.1em] text-ink/70">
+                Requirement
+              </legend>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                {fields.map((f) => {
+                  const fieldId = `${itemPrefix}-${f.name}`;
+                  return f.type === "select" ? (
+                    <Field key={f.name} label={f.label} htmlFor={fieldId}>
+                      <SelectInput
+                        id={fieldId}
+                        value={item.values[f.name] || ""}
+                        onChange={set(f.name)}
+                        placeholder={f.placeholder || "Select an option"}
+                        options={f.options}
+                      />
+                    </Field>
+                  ) : (
+                    <Field key={f.name} label={f.label} htmlFor={fieldId} hint={f.hint}>
+                      <TextInput
+                        id={fieldId}
+                        type={f.type || "text"}
+                        value={item.values[f.name] || ""}
+                        onChange={set(f.name)}
+                        placeholder={f.placeholder}
+                      />
+                    </Field>
+                  );
+                })}
+
+                <Field
+                  label={item.category === "exports" ? "Destination country / port" : "Project location / site pin"}
+                  htmlFor={`${itemPrefix}-location`}
+                >
+                  <TextInput
+                    id={`${itemPrefix}-location`}
+                    value={item.values.location || ""}
+                    onChange={set("location")}
+                    placeholder={
+                      item.category === "exports" ? "Destination country / port" : "City, site address or map pin"
+                    }
+                  />
+                </Field>
+              </div>
+
+              <Field
+                label="Requirement details"
+                htmlFor={`${itemPrefix}-details`}
+                required
+                hint="Max 3,000 characters"
               >
-                <Icon
-                  className={cn("mt-0.5 h-4 w-4 shrink-0", active ? "text-orange" : "text-slate")}
-                  strokeWidth={1.6}
-                  aria-hidden="true"
-                />
-                <span>
-                  <span className="block text-[13px] font-semibold leading-tight text-ink">{c.label}</span>
-                  <span className="mt-0.5 block text-[11px] leading-snug text-slate">{c.blurb}</span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </fieldset>
-
-      <fieldset className="space-y-4">
-        <legend className="text-[12px] font-medium uppercase tracking-[0.1em] text-ink/70">
-          02 — Requirement
-        </legend>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          {fields.map((f) =>
-            f.type === "select" ? (
-              <Field key={f.name} label={f.label} htmlFor={f.name}>
-                <SelectInput
-                  id={f.name}
-                  name={f.name}
-                  value={values[f.name] || ""}
-                  onChange={set(f.name)}
-                  placeholder={f.placeholder || "Select an option"}
-                  options={f.options}
+                <TextArea
+                  id={`${itemPrefix}-details`}
+                  required
+                  minLength={5}
+                  maxLength={3000}
+                  value={item.values.requirement || ""}
+                  onChange={set("requirement")}
+                  placeholder="Structure type, grades, pour schedule, access constraints — anything that helps us quote accurately."
+                  rows={5}
                 />
               </Field>
-            ) : (
-              <Field key={f.name} label={f.label} htmlFor={f.name} hint={f.hint}>
-                <TextInput
-                  id={f.name}
-                  name={f.name}
-                  type={f.type || "text"}
-                  value={values[f.name] || ""}
-                  onChange={set(f.name)}
-                  placeholder={f.placeholder}
-                />
-              </Field>
-            )
-          )}
+            </fieldset>
+          </section>
+        );
+      })}
 
-          <Field
-            label={category === "exports" ? "Destination country / port" : "Project location / site pin"}
-            htmlFor="location"
-          >
-            <TextInput
-              id="location"
-              value={values.location || ""}
-              onChange={set("location")}
-              placeholder={
-                category === "exports" ? "Destination country / port" : "City, site address or map pin"
-              }
-            />
-          </Field>
-        </div>
-
-        <Field label="Requirement details" htmlFor="requirement" required hint="Max 3,000 characters">
-          <TextArea
-            id="requirement"
-            name="requirement"
-            required
-            minLength={5}
-            maxLength={3000}
-            value={values.requirement || ""}
-            onChange={set("requirement")}
-            placeholder="Structure type, grades, pour schedule, access constraints — anything that helps us quote accurately."
-            rows={5}
-          />
-        </Field>
-      </fieldset>
+      <button
+        type="button"
+        onClick={addRequirementItem}
+        disabled={requirementItems.length >= MAX_REQUIREMENT_ITEMS}
+        className="inline-flex items-center gap-2 border border-orange px-4 py-2.5 text-[13px] font-semibold text-orange transition-colors hover:bg-orange/5 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        + Add Item
+      </button>
+      {requirementItems.length >= MAX_REQUIREMENT_ITEMS && (
+        <p className="-mt-6 text-[12px] text-slate">You can include up to {MAX_REQUIREMENT_ITEMS} requirement items in one enquiry.</p>
+      )}
 
       <fieldset className="space-y-4">
         <legend className="text-[12px] font-medium uppercase tracking-[0.1em] text-ink/70">

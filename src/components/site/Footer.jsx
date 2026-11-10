@@ -2,7 +2,8 @@ import React from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight, MessageCircle } from "lucide-react";
 import Logo from "@/components/site/Logo";
-import { companies, CONTACT, engines } from "@/data/group";
+import { companies, engines } from "@/data/group";
+import { usePublicContact } from "@/lib/site-preview";
 
 const quickLinks = [
   { label: "About the group", to: "/about" },
@@ -20,6 +21,7 @@ const heading = "font-mono text-[10px] uppercase tracking-[0.22em] text-paper/40
 const item = "text-[14px] text-paper/65 transition-colors duration-300 hover:text-orange";
 
 export default function Footer() {
+  const contact = usePublicContact();
   return (
     <footer className="relative overflow-hidden bg-ink text-paper">
       <div
@@ -40,12 +42,12 @@ export default function Footer() {
                 and four business engines.
               </p>
               <a
-                href={`mailto:${CONTACT.email}`}
+                href={`mailto:${contact.email}`}
                 className="mt-7 block text-[17px] font-medium tracking-tight text-paper transition-colors hover:text-orange"
               >
-                {CONTACT.email}
+                {contact.email}
               </a>
-              <p className="mt-1 text-[10px] leading-relaxed text-paper/35">{CONTACT.emailNote}.</p>
+              <p className="mt-1 text-[10px] leading-relaxed text-paper/35">{contact.emailNote}.</p>
               <Link
                 to="/quote"
                 className="group mt-6 inline-flex min-h-[46px] items-center gap-2 rounded-full bg-orange px-6 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink transition-all duration-300 hover:bg-[#c95f10] hover:shadow-glowOrange"
@@ -54,7 +56,7 @@ export default function Footer() {
                 <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
               </Link>
               <a
-                href={CONTACT.whatsapp}
+                href={contact.whatsapp}
                 target="_blank"
                 rel="noreferrer noopener"
                 className="mt-3 inline-flex min-h-[44px] items-center gap-2 rounded-full border border-paper/25 px-5 text-[11px] font-semibold uppercase tracking-[0.12em] text-paper transition-colors hover:border-paper hover:bg-paper hover:text-ink"
@@ -105,17 +107,16 @@ export default function Footer() {
               <div>
                 <p className={heading}>Corporate office</p>
                 <address className="mt-5 space-y-1 text-[14px] not-italic leading-relaxed text-paper/65">
-                  <span className="block">Hyderabad, Telangana, India</span>
-                  <span className="block text-paper/35">Full address to be published</span>
+                  {contact.addressLines.map((line) => <span key={line} className="block">{line}</span>)}
                 </address>
                 <a
-                  href={`tel:${CONTACT.phone.replace(/\s/g, "")}`}
+                  href={`tel:${contact.phone.replace(/\s/g, "")}`}
                   className="mt-4 block text-[15px] font-medium text-paper transition-colors hover:text-orange"
                 >
-                  {CONTACT.phone}
+                  {contact.phone}
                 </a>
                 <p className="mt-4 text-[11.5px] leading-relaxed text-paper/30">
-                  {CONTACT.phoneNote}; confirm before launch.
+                  {contact.phoneNote}; confirm before launch.
                 </p>
 
                 <p className={`${heading} mt-7`}>Social</p>

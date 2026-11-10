@@ -1,10 +1,11 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowUpRight, MapPin } from "lucide-react";
 import { Image } from "@/components/ui/image";
 import Reveal from "@/components/site/Reveal";
 import { PrimaryLink, TextLink } from "@/components/site/CTA";
 import { projects, projectBySlug } from "@/data/catalogue";
 import { companyBySlug } from "@/data/group";
+import { applyPublishedContent, usePublishedContent } from "@/lib/site-preview";
 
 export const Route = createFileRoute("/_site/work/$project")({
   component: ProjectPage,
@@ -21,12 +22,44 @@ export const Route = createFileRoute("/_site/work/$project")({
 
 function ProjectPage() {
   const { project: slug } = Route.useParams();
-  const project = projectBySlug(slug);
-  if (!project) throw notFound();
+  const publishedProjects = usePublishedContent("projects");
+  const liveProjects = applyPublishedContent(projects, publishedProjects, "projects", (record) => `project-${record.slug}`, (record, fields) => ({
+    ...record,
+    slug: fields.slug || record.slug,
+    name: fields.name,
+    client: fields.client,
+    location: fields.location,
+    sector: fields.sector,
+    companySlug: fields.companySlug || record.companySlug,
+    status: fields.status,
+    scope: fields.scope,
+    summary: fields.summary,
+    overview: fields.overview || fields.summary,
+    image: fields.image,
+    gallery: (fields.gallery || "").split("\n").filter(Boolean),
+  }), (fields) => ({
+    ...fields,
+    companySlug: fields.companySlug || "pipl-concrete",
+    overview: fields.overview || fields.summary,
+    gallery: (fields.gallery || "").split("\n").filter(Boolean),
+  }));
+  const project = liveProjects.find((record) => record.slug === slug) || projectBySlug(slug);
+  if (!project) {
+    return (
+      <section className="container-x min-h-[50vh] py-20">
+        <p className="eyebrow">Project reference</p>
+        <h1 className="mt-4 text-3xl font-semibold">This project is not available.</h1>
+        <p className="mt-3 text-sm text-slate">It may have been removed or has not been published in this local preview.</p>
+        <Link to="/work" className="mt-6 inline-flex min-h-11 items-center gap-2 bg-ink px-5 text-xs font-semibold text-paper">
+          Browse all projects <ArrowUpRight className="h-4 w-4" />
+        </Link>
+      </section>
+    );
+  }
 
   const company = companyBySlug(project.companySlug);
-  const index = projects.findIndex((p) => p.slug === project.slug);
-  const next = projects[(index + 1) % projects.length];
+  const index = liveProjects.findIndex((p) => p.slug === project.slug);
+  const next = liveProjects[(index + 1) % liveProjects.length];
 
   return (
     <>

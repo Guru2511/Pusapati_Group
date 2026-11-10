@@ -20,6 +20,10 @@ export default function CareerForm({ defaultDepartment = "" }) {
     const data = new FormData(e.currentTarget);
     const cvFile = data.get("cv_file");
     setCvError("");
+    if (!(cvFile instanceof File) || cvFile.size === 0) {
+      setCvError("Please upload your CV to submit your application.");
+      return;
+    }
     if (cvFile instanceof File && cvFile.size > 5 * 1024 * 1024) {
       setCvError("Your CV must be 5 MB or smaller.");
       return;
@@ -39,7 +43,7 @@ export default function CareerForm({ defaultDepartment = "" }) {
       portfolio_url: String(data.get("portfolio_url") || ""),
       cover_note: String(data.get("cover_note") || ""),
       is_internship: data.get("is_internship") === "on",
-    }, { cvFile: cvFile instanceof File && cvFile.size > 0 ? cvFile : null });
+    }, { cvFile });
   };
 
   if (done) {
@@ -95,11 +99,12 @@ export default function CareerForm({ defaultDepartment = "" }) {
         <TextArea id="j-note" name="cover_note" maxLength={2500} rows={4} />
       </Field>
 
-      <Field label="Upload CV (optional)" htmlFor="j-cv">
+      <Field label="Upload CV" htmlFor="j-cv" required>
         <input
           id="j-cv"
           name="cv_file"
           type="file"
+          required
           accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
           className="block w-full rounded-lg border border-ink/15 bg-white px-3 py-2 text-xs text-ink file:mr-3 file:rounded-md file:border-0 file:bg-paper file:px-3 file:py-2 file:text-xs file:font-semibold"
         />

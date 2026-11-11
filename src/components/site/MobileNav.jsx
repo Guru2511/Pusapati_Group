@@ -15,6 +15,7 @@ const links = [
   { label: "Vendors", to: "/vendors" },
   { label: "Investors", to: "/investors" },
   { label: "Careers", to: "/careers" },
+  { label: "Intelligence", to: "/intelligence" },
   { label: "Contact", to: "/contact" },
 ];
 

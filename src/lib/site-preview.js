@@ -1,7 +1,10 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getPublishedSiteContent } from "@/lib/admin-fns";
+import { applyPublishedContent } from "@/lib/site-content";
 import { CONTACT } from "@/data/group";
+
+export { applyPublishedContent } from "@/lib/site-content";
 
 export function usePublishedContent(category) {
   const { data = [], error } = useQuery({
@@ -27,22 +30,4 @@ export function usePublicContact() {
     whatsapp: fields?.whatsapp ?? CONTACT.whatsapp,
     addressLines: address === undefined ? CONTACT.addressLines : address.split(/\r?\n/).filter(Boolean),
   };
-}
-
-export function applyPublishedContent(items, records, category, getId, transform, createNew) {
-  const categoryRecords = records.filter((record) => record.category === category);
-  const deletedIds = new Set(categoryRecords.filter((record) => record.deleted).map((record) => record.id));
-  const recordsById = new Map(categoryRecords.filter((record) => !record.deleted).map((record) => [record.id, record.fields]));
-  const visibleItems = items.filter((item) => !deletedIds.has(getId(item, category)));
-  const existingIds = new Set(visibleItems.map((item) => getId(item, category)));
-  const updatedItems = visibleItems.map((item) => {
-    const fields = recordsById.get(getId(item, category));
-    return fields ? transform(item, fields) : item;
-  });
-  if (!createNew) return updatedItems;
-
-  const newItems = categoryRecords
-    .filter((record) => !record.deleted && !existingIds.has(record.id))
-    .map((record) => createNew(record.fields));
-  return [...updatedItems, ...newItems];
 }

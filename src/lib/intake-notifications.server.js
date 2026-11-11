@@ -1,7 +1,7 @@
-import { secrets } from "base44:runtime";
+import { getSecret } from "@/lib/secrets.server";
 
 async function requiredSecret(name) {
-  const value = await secrets.get(name);
+  const value = await getSecret(name);
   if (typeof value !== "string" || !value.trim()) {
     throw new Error(`Missing required ${name} secret.`);
   }

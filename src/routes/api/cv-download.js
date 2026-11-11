@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { get } from "@vercel/blob";
 import { neon } from "@neondatabase/serverless";
-import { secrets } from "base44:runtime";
 import { verifyAdminIdToken } from "@/lib/admin-auth.server";
+import { getSecret } from "@/lib/secrets.server";
 
 export const Route = createFileRoute("/api/cv-download")({
   server: {
@@ -20,7 +20,7 @@ export const Route = createFileRoute("/api/cv-download")({
           return Response.json({ error: "Invalid career application ID." }, { status: 400 });
         }
 
-        const connectionString = await secrets.get("DATABASE_URL");
+        const connectionString = await getSecret("DATABASE_URL");
         if (typeof connectionString !== "string" || !connectionString.trim()) {
           throw new Error("Missing required DATABASE_URL secret for CV downloads.");
         }

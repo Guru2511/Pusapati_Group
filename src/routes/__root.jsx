@@ -2,8 +2,6 @@ import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-r
 import { DefaultCatchBoundary } from "@/components/DefaultCatchBoundary";
 import { NotFound } from "@/components/NotFound";
 import { Toaster } from "@/components/ui/sonner";
-import { AuthProvider } from "@/lib/AuthContext";
-import { Base44Scripts } from "base44:document";
 import appCss from "@/routes/index.css?url";
 
 export const Route = createRootRoute({
@@ -39,10 +37,10 @@ export const Route = createRootRoute({
 
 function RootComponent() {
   return (
-    <AuthProvider>
+    <>
       <Outlet />
       <Toaster />
-    </AuthProvider>
+    </>
   );
 }
 
@@ -53,10 +51,8 @@ function RootDocument({ children }) {
       <head>
         <HeadContent />
       </head>
-      {/* data-react-root: the builder's preview bridge looks for #root and falls back to this. */}
-      <body data-react-root="true">
+      <body>
         {children}
-        <Base44Scripts />
         <Scripts />
       </body>
     </html>

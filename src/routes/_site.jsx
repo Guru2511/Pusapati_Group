@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router"
 import { motion, useReducedMotion } from "framer-motion";
 import Header from "@/components/site/Header";
 import Footer from "@/components/site/Footer";
+import IntelligenceLauncher from "@/components/intelligence/IntelligenceLauncher";
 
 export const Route = createFileRoute("/_site")({
   component: SiteLayout,
@@ -30,6 +31,7 @@ function SiteLayout() {
           <Outlet />
         </motion.div>
       </main>
+      <IntelligenceLauncher />
       <Footer />
     </div>
   );

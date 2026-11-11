@@ -1,8 +1,8 @@
 import { neon } from "@neondatabase/serverless";
-import { secrets } from "base44:runtime";
+import { getSecret } from "@/lib/secrets.server";
 
 export async function saveIntakeSubmission(type, payload) {
-  const connectionString = await secrets.get("DATABASE_URL");
+  const connectionString = await getSecret("DATABASE_URL");
   if (typeof connectionString !== "string" || !connectionString.trim()) {
     throw new Error("Missing required DATABASE_URL secret for Neon.");
   }

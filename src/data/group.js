@@ -1,35 +1,20 @@
 export const IMG = {
-  quarry:
-    "https://media.base44.com/images/public/6ae437127998c7a0469adf69/1c69b0586_generated_a461da44.png",
-  materials:
-    "https://media.base44.com/images/public/6ae437127998c7a0469adf69/65950c39a_generated_001c2074.png",
-  trade:
-    "https://media.base44.com/images/public/6ae437127998c7a0469adf69/691f65266_generated_39484ad9.png",
-  realestate:
-    "https://media.base44.com/images/public/6ae437127998c7a0469adf69/88c6f1d14_generated_894d9893.png",
-  digital:
-    "https://media.base44.com/images/public/6ae437127998c7a0469adf69/633e7d34d_generated_c471ba4e.png",
-  candeur:
-    "https://media.base44.com/images/public/6ae437127998c7a0469adf69/ed52cc190_generated_db07964b.png",
-  pooja:
-    "https://media.base44.com/images/public/6ae437127998c7a0469adf69/6258d04cc_generated_72487ddc.png",
-  datacenter:
-    "https://media.base44.com/images/public/6ae437127998c7a0469adf69/5e08e479d_generated_67e87cd5.png",
-  anaya:
-    "https://media.base44.com/images/public/6ae437127998c7a0469adf69/1fa483bf0_generated_b186c903.png",
-  pool: "https://media.base44.com/images/public/6ae437127998c7a0469adf69/c7f1c7413_generated_6d5cc254.png",
-  concrete:
-    "https://media.base44.com/images/public/6ae437127998c7a0469adf69/b2849ac43_generated_c08b0f31.png",
-  aggregate:
-    "https://media.base44.com/images/public/6ae437127998c7a0469adf69/24805623c_generated_f1acb010.png",
-  vision:
-    "https://media.base44.com/images/public/6ae437127998c7a0469adf69/5e08e479d_generated_67e87cd5.png",
-  plant:
-    "https://media.base44.com/images/public/6ae437127998c7a0469adf69/1c69b0586_generated_a461da44.png",
-  warehouse:
-    "https://media.base44.com/images/public/6ae437127998c7a0469adf69/691f65266_generated_39484ad9.png",
-  office:
-    "https://media.base44.com/images/public/6ae437127998c7a0469adf69/633e7d34d_generated_c471ba4e.png",
+  quarry: "/images/quarry.png",
+  materials: "/images/materials.png",
+  trade: "/images/trade.png",
+  realestate: "/images/realestate.png",
+  digital: "/images/digital.png",
+  candeur: "/images/candeur.png",
+  pooja: "/images/pooja.png",
+  datacenter: "/images/datacenter.png",
+  anaya: "/images/anaya.png",
+  pool: "/images/pool.png",
+  concrete: "/images/concrete.png",
+  aggregate: "/images/aggregate.png",
+  vision: "/images/datacenter.png",
+  plant: "/images/quarry.png",
+  warehouse: "/images/trade.png",
+  office: "/images/digital.png",
   piplLogo: "/images/pipl-logo.png",
 };
 

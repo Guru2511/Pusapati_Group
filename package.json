@@ -1,5 +1,5 @@
 {
-  "name": "base44-tanstack-app",
+  "name": "pusapati-group",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -14,8 +14,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@base44/sdk": "^0.8.57",
-    "@base44/vite-plugin": "^1.0.50",
     "@hello-pangea/dnd": "^18.0.1",
     "@hookform/resolvers": "^5.9.1",
     "@neondatabase/serverless": "^1.2.0",
@@ -90,7 +88,6 @@
     "zod": "~4.4.3"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.54.6",
     "@eslint/js": "^9.19.0",
     "@vitejs/plugin-react": "^6.0.5",
     "autoprefixer": "^10.4.20",
@@ -100,8 +97,7 @@
     "nitro": "^3.0.261102-rc",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.17",
-    "vite": "^8.2.0",
-    "wrangler": "^4.130.0"
+    "vite": "^8.2.0"
   },
   "overrides": {
     "@tanstack/openai-base": "0.10.11"

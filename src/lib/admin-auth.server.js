@@ -1,12 +1,12 @@
-import { secrets } from "base44:runtime";
 import { createRemoteJWKSet, jwtVerify } from "jose";
+import { getSecret } from "@/lib/secrets.server";
 
 const firebaseSigningKeys = createRemoteJWKSet(
   new URL("https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com"),
 );
 
 async function getRequiredSecret(name) {
-  const value = await secrets.get(name);
+  const value = await getSecret(name);
   if (typeof value !== "string" || !value.trim()) {
     throw new Error(`Missing required ${name} secret for Firebase admin authentication.`);
   }

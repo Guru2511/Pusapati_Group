@@ -93,7 +93,7 @@ export const askPusapatiIntelligence = createServerFn({ method: "POST" })
       });
 
       try {
-        result = await chat({ ...request, adapter: await geminiModel("gemini-3.5-flash-lite") });
+        result = await chat({ ...request, adapter: await geminiModel("gemini-3.1-flash-lite") });
       } catch (fallbackError) {
         console.error("[pusapati intelligence] Gemini fallback request failed.", {
           name: fallbackError?.name,

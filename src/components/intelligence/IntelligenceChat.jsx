@@ -90,7 +90,7 @@ export default function IntelligenceChat() {
     try {
       const result = await askPusapatiIntelligence({
         data: { language, messages: nextMessages },
-        signal: AbortSignal.timeout(25_000),
+        signal: AbortSignal.timeout(20_000),
       });
       setMessages((current) => [...current, { role: "assistant", content: result.answer, sources: result.sources }]);
     } catch (requestError) {

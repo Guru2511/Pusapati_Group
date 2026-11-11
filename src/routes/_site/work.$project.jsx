@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowUpRight, MapPin } from "lucide-react";
 import { Image } from "@/components/ui/image";
 import Reveal from "@/components/site/Reveal";
+import ProjectLink from "@/components/site/ProjectLink";
 import { PrimaryLink, TextLink } from "@/components/site/CTA";
 import { projects, projectBySlug } from "@/data/catalogue";
 import { companyBySlug } from "@/data/group";
@@ -185,14 +186,13 @@ function ProjectPage() {
             <p className="mt-2 font-display text-[22px] font-semibold tracking-tight text-ink">{next.name}</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <Link
-              to="/work/$project"
-              params={{ project: next.slug }}
+            <ProjectLink
+              project={next}
               className="group inline-flex min-h-[44px] items-center gap-2 border border-ink/25 px-5 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink transition-colors hover:bg-ink hover:text-paper"
             >
               View case study
               <ArrowUpRight className="h-3.5 w-3.5" />
-            </Link>
+            </ProjectLink>
             <PrimaryLink to="/quote">Get a quote</PrimaryLink>
           </div>
         </div>

@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { ArrowUpRight, MapPin } from "lucide-react";
 import { Image } from "@/components/ui/image";
 import PageHero from "@/components/site/PageHero";
 import Reveal from "@/components/site/Reveal";
+import ProjectLink from "@/components/site/ProjectLink";
 import { projects } from "@/data/catalogue";
 import { companies, companyBySlug, IMG } from "@/data/group";
 import { applyPublishedContent, usePublishedContent } from "@/lib/site-preview";
@@ -177,7 +178,7 @@ function WorkPage() {
                 const company = companyBySlug(p.companySlug);
                 return (
                   <Reveal key={p.slug} delay={i * 60}>
-                    <Link to="/work/$project" params={{ project: p.slug }} className="group block">
+                    <ProjectLink project={p} className="group block">
                       <div className="relative aspect-[16/11] overflow-hidden bg-concrete">
                         <Image
                           src={p.image}
@@ -207,7 +208,7 @@ function WorkPage() {
                         </div>
                         <ArrowUpRight className="mt-1 h-5 w-5 text-ink/40 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-ink" />
                       </div>
-                    </Link>
+                    </ProjectLink>
                   </Reveal>
                 );
               })}

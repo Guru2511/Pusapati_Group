@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowUpRight, MapPin } from "lucide-react";
 import { Image } from "@/components/ui/image";
 import Reveal from "@/components/site/Reveal";
+import ProjectLink from "@/components/site/ProjectLink";
 import { projects } from "@/data/catalogue";
 import { companyBySlug } from "@/data/group";
 import { applyPublishedContent, usePublishedContent } from "@/lib/site-preview";
@@ -62,7 +63,7 @@ export default function ProjectsSection() {
             const company = companyBySlug(p.companySlug);
             return (
               <Reveal key={p.slug} delay={i * 90} className={i % 2 === 1 ? "md:mt-14" : ""}>
-                <Link to="/work/$project" params={{ project: p.slug }} className="group block">
+                <ProjectLink project={p} className="group block">
                   <div className="relative aspect-[4/3] overflow-hidden rounded-[24px] border border-ink/10 bg-concrete">
                     <Image
                       src={p.image}
@@ -95,7 +96,7 @@ export default function ProjectsSection() {
                       </p>
                     </div>
                   </div>
-                </Link>
+                </ProjectLink>
               </Reveal>
             );
           })}

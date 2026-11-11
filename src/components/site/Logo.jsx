@@ -6,8 +6,8 @@ export default function Logo({ dark = false, compact = false, className }) {
     return (
       <img
         src="/images/pipl-group-logo-final.png"
-        alt=""
-        className={cn("h-10 w-auto max-w-[190px] object-contain", className)}
+        alt="Pusapati Group"
+        className={cn("h-12 w-auto max-w-[220px] object-contain", className)}
       />
     );
   }

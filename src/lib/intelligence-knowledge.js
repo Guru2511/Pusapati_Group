@@ -101,6 +101,12 @@ const publicSources = [
     ].join("\n"),
   },
   {
+    id: "quote-enquiries",
+    title: "Quotes and business enquiries",
+    path: "/quote",
+    content: "The quote form accepts enquiries for concrete, aggregates, planned GGBS, construction materials, villas, proposed international exports, and other enquiries including partnerships. The enquiry desk reviews requirements, confirms technical details and availability, then provides a written quote and schedule. Submitting an enquiry does not create a contract or reserve supply capacity.",
+  },
+  {
     id: "group-vision",
     title: "Vision 2032",
     path: "/vision-2032",
@@ -324,6 +330,9 @@ const tokens = (value) => (value.toLocaleLowerCase().match(/[\p{L}\p{N}]+/gu) ||
 export function retrievePublicKnowledge(question, records, limit = 5) {
   const terms = new Set(tokens(question));
   if (!terms.size) return records.slice(0, limit);
+  const vendorIntent = /\b(vendor|supplier|procurement|register|registration|rfq)\b|విక్రేత|వెండర్|సరఫరాదారు|నమోదు|विक्रेता|आपूर्तिकर्ता|पंजीकरण|रजिस्टर/iu.test(question);
+  const homeIntent = /\b(house|home|residential|construction|build|builder|contractor)\b|ఇల్లు|గృహం|నిర్మాణం|నిర్మించ|కట్ట|घर|मकान|निर्माण|बनाने|बनाना/iu.test(question);
+  const quoteIntent = /\b(quote|quotation|price|cost|business|partnership|enquir|materials)\b|కోట్|ధర|విచారణ|వ్యాపారం|వ్యాపార|कोटेशन|कीमत|मूल्य|व्यापार|व्यवसाय|साझेदारी|पूछताछ/iu.test(question);
 
   const ranked = records.map((record, index) => {
     const titleTerms = new Set(tokens(record.title));
@@ -333,6 +342,10 @@ export function retrievePublicKnowledge(question, records, limit = 5) {
       if (titleTerms.has(term)) score += 4;
       if (contentTerms.has(term)) score += 1;
     }
+    if (vendorIntent && record.id === "vendor-information") score += 12;
+    if (homeIntent && record.id === "company-brikbuild-infra") score += 12;
+    if ((vendorIntent || homeIntent) && record.id === "contact") score += 2;
+    if (record.id === "quote-enquiries" && quoteIntent) score += 8;
     return { record, index, score };
   }).filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score || a.index - b.index)

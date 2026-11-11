@@ -9,21 +9,51 @@ const languages = {
     greeting: "Hello. What would you like to know about Pusapati Group?",
     placeholder: "Ask about our companies, products or enquiries…",
     send: "Send",
-    suggestions: ["What does Pusapati Group do?", "Which companies are operating?", "How can I make an enquiry?"],
+    suggestions: [
+      "What does Pusapati Group do?",
+      "Which companies are operating?",
+      "How can I register as a vendor?",
+      "Can BrikBuild help build a home?",
+      "How do I request a quote?",
+    ],
+    errorRateLimit: "Too many questions. Please wait a minute and try again.",
+    errorUnavailable: "Pusapati Intelligence is busy right now. Please try again shortly or contact the Group desk.",
+    errorTimeout: "That request took too long. Please try a shorter question or contact the Group desk.",
+    errorGeneric: "We couldn’t complete that answer. Please try again or contact the Group desk.",
   },
   te: {
     label: "తెలుగు",
     greeting: "నమస్కారం. పుసపతి గ్రూప్ గురించి ఏమి తెలుసుకోవాలనుకుంటున్నారు?",
     placeholder: "మా కంపెనీలు, ఉత్పత్తులు లేదా విచారణల గురించి అడగండి…",
     send: "పంపండి",
-    suggestions: ["పుసపతి గ్రూప్ ఏమి చేస్తుంది?", "ఏ కంపెనీలు పనిచేస్తున్నాయి?", "నేను ఎలా విచారణ చేయాలి?"],
+    suggestions: [
+      "పుసపతి గ్రూప్ ఏమి చేస్తుంది?",
+      "ప్రస్తుతం ఏ కంపెనీలు పనిచేస్తున్నాయి?",
+      "విక్రేతగా ఎలా నమోదు చేసుకోవాలి?",
+      "ఇల్లు నిర్మించడంలో బ్రిక్‌బిల్డ్ సహాయపడుతుందా?",
+      "కోట్ కోసం ఎలా విచారించాలి?",
+    ],
+    errorRateLimit: "చాలా ప్రశ్నలు అడిగారు. ఒక నిమిషం వేచి మళ్లీ ప్రయత్నించండి.",
+    errorUnavailable: "ప్రస్తుతం పుసపతి ఇంటెలిజెన్స్ అందుబాటులో లేదు. కొద్దిసేపటి తర్వాత ప్రయత్నించండి లేదా గ్రూప్ డెస్క్‌ను సంప్రదించండి.",
+    errorTimeout: "ఈ అభ్యర్థనకు ఎక్కువ సమయం పట్టింది. చిన్న ప్రశ్నతో మళ్లీ ప్రయత్నించండి లేదా గ్రూప్ డెస్క్‌ను సంప్రదించండి.",
+    errorGeneric: "సమాధానం ఇవ్వలేకపోయాం. మళ్లీ ప్రయత్నించండి లేదా గ్రూప్ డెస్క్‌ను సంప్రదించండి.",
   },
   hi: {
     label: "हिन्दी",
     greeting: "नमस्ते। आप पुसापति ग्रुप के बारे में क्या जानना चाहेंगे?",
     placeholder: "हमारी कंपनियों, उत्पादों या पूछताछ के बारे में पूछें…",
     send: "भेजें",
-    suggestions: ["पुसापति ग्रुप क्या करता है?", "कौन-सी कंपनियां काम कर रही हैं?", "मैं पूछताछ कैसे करूं?"],
+    suggestions: [
+      "पुसापति ग्रुप क्या करता है?",
+      "अभी कौन-सी कंपनियां काम कर रही हैं?",
+      "विक्रेता के रूप में पंजीकरण कैसे करें?",
+      "क्या ब्रिकबिल्ड घर बनाने में मदद कर सकता है?",
+      "कोटेशन के लिए कैसे पूछें?",
+    ],
+    errorRateLimit: "बहुत सारे प्रश्न हो गए हैं। एक मिनट रुककर फिर कोशिश करें।",
+    errorUnavailable: "पुसापति इंटेलिजेंस अभी उपलब्ध नहीं है। थोड़ी देर बाद कोशिश करें या ग्रुप डेस्क से संपर्क करें।",
+    errorTimeout: "इस अनुरोध में बहुत समय लगा। छोटा प्रश्न पूछें या ग्रुप डेस्क से संपर्क करें।",
+    errorGeneric: "अभी उत्तर नहीं मिल पाया। फिर कोशिश करें या ग्रुप डेस्क से संपर्क करें।",
   },
 };
 
@@ -58,11 +88,22 @@ export default function IntelligenceChat() {
     setSending(true);
 
     try {
-      const result = await askPusapatiIntelligence({ data: { language, messages: nextMessages } });
+      const result = await askPusapatiIntelligence({
+        data: { language, messages: nextMessages },
+        signal: AbortSignal.timeout(25_000),
+      });
       setMessages((current) => [...current, { role: "assistant", content: result.answer, sources: result.sources }]);
     } catch (requestError) {
       console.error("[pusapati intelligence] Could not answer the question:", requestError);
-      setError("We couldn’t complete that answer. Please try again or contact the Group desk.");
+      const errorText = requestError?.message || "";
+      if (requestError?.status === 429) setError(copy.errorRateLimit);
+      else if (requestError?.status === 504 || requestError?.code === "AI_PROVIDER_TIMEOUT" || /timed?\s*out|timeout/i.test(errorText)) {
+        setError(copy.errorTimeout);
+      } else if (requestError?.status === 503 || requestError?.code === "AI_PROVIDER_UNAVAILABLE" || /temporarily unavailable/i.test(errorText)) {
+        setError(copy.errorUnavailable);
+      } else {
+        setError(copy.errorGeneric);
+      }
     } finally {
       setSending(false);
     }

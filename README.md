@@ -53,7 +53,7 @@ Enable Firebase Email/Password sign-in and create the administrator account in F
 
 ## Pusapati Intelligence
 
-The site has an Intelligence link, a floating launcher, and `/intelligence`. Visitors can chat without creating an account. The server validates and bounds messages, limits each IP to 10 requests per minute using Neon, retrieves relevant public website information and published CMS records, and calls Gemini using the server-only `GEMINI_API_KEY`. Answers can cite relevant public pages.
+The site has an Intelligence link, a floating launcher, and `/intelligence`. Visitors can chat without creating an account. The server validates and bounds messages, limits each IP to 10 requests per minute using Neon, retrieves relevant public website information and published CMS records, and calls Gemini using the server-only `GEMINI_API_KEY`. Gemini 3.8 Flash is tried first, with Gemini 3.5 Flash-Lite as a bounded fallback when the provider is busy or times out. The assistant can explain published vendor-registration and BrikBuild construction information and direct visitors to the relevant enquiry page. Answers can cite relevant public pages.
 
 The chat is public and Gemini usage may be subject to Google AI Studio quotas, rate limits, or billing requirements; a free tier is not guaranteed. The draft Knowledge Base PDF is intentionally excluded; do not index it unless an approved public edition is provided. Before enabling production chat, configure the Gemini key, Neon connection, and `db/intelligence-rate-limits.sql` migration.
 

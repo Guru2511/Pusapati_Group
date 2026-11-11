@@ -11,6 +11,7 @@ export async function geminiModel(model = "gemini-3.8-flash") {
 
   return createOpenaiChatCompletions(model, apiKey, {
     baseURL: GEMINI_BASE_URL,
-    timeout: 30_000,
+    maxRetries: 0,
+    timeout: 10_000,
   });
 }

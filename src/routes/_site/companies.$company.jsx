@@ -2,7 +2,6 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowUpRight, Check } from "lucide-react";
 import { Image } from "@/components/ui/image";
 import Reveal from "@/components/site/Reveal";
-import ProjectLink from "@/components/site/ProjectLink";
 import { PrimaryLink, TextLink } from "@/components/site/CTA";
 import { companies, companyBySlug, engineById } from "@/data/group";
 import { projects } from "@/data/catalogue";
@@ -221,7 +220,7 @@ function CompanyPage() {
             <div className="mt-8 grid gap-5 md:grid-cols-2">
               {related.map((p, i) => (
                 <Reveal key={p.slug} delay={i * 60}>
-                  <ProjectLink project={p} className="group flex gap-4 border border-ink/10 bg-paper p-3">
+                  <Link to="/work/$project" params={{ project: p.slug }} className="group flex gap-4 border border-ink/10 bg-paper p-3">
                     <div className="relative h-24 w-28 shrink-0 overflow-hidden bg-concrete">
                       <Image src={p.image} alt={p.name} className="h-full w-full object-cover" />
                     </div>
@@ -237,7 +236,7 @@ function CompanyPage() {
                       </p>
                     </div>
                     <ArrowUpRight className="mt-1 h-4 w-4 shrink-0 text-ink/40 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                  </ProjectLink>
+                  </Link>
                 </Reveal>
               ))}
             </div>

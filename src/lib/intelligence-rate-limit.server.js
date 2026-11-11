@@ -10,9 +10,9 @@ export async function enforceIntelligenceRateLimit() {
   if (!connectionString?.trim()) {
     throw new Error("Missing required DATABASE_URL secret for Intelligence rate limiting.");
   }
-  const hashSecret = await getSecret("OPENAI_API_KEY");
+  const hashSecret = await getSecret("GEMINI_API_KEY");
   if (!hashSecret?.trim()) {
-    throw new Error("Missing required OPENAI_API_KEY secret for Intelligence.");
+    throw new Error("Missing required GEMINI_API_KEY secret for Intelligence.");
   }
 
   const request = getRequest();

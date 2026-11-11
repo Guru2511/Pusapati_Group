@@ -1,6 +1,6 @@
 # Pusapati Group
 
-A TanStack Start application using React 19 and plain JavaScript. It is designed to deploy to Vercel with Nitro. Public form submissions and published website content use Neon Postgres; administrator sign-in uses Firebase Authentication; private CV files use Vercel Blob; Pusapati Intelligence uses OpenAI.
+A TanStack Start application using React 19 and plain JavaScript. It is designed to deploy to Vercel with Nitro. Public form submissions and published website content use Neon Postgres; administrator sign-in uses Firebase Authentication; private CV files use Vercel Blob; Pusapati Intelligence uses Google Gemini.
 
 ## Local development
 
@@ -29,7 +29,7 @@ Configure these values in Vercel Project Settings → Environment Variables. Ser
 | Variable | Purpose |
 | --- | --- |
 | `DATABASE_URL` | Neon connection string for site content, forms, admin dashboard, and Intelligence rate limiting |
-| `OPENAI_API_KEY` | Server-only OpenAI key for the public Intelligence chat |
+| `GEMINI_API_KEY` | Server-only Google AI Studio key for the public Intelligence chat |
 | `FIREBASE_PROJECT_ID` | Firebase project used to verify admin ID tokens |
 | `ADMIN_EMAILS` | Comma-separated administrator email allowlist |
 | `N8N_WEBHOOK_URL` | Optional HTTPS webhook for WhatsApp intake alerts |
@@ -53,9 +53,9 @@ Enable Firebase Email/Password sign-in and create the administrator account in F
 
 ## Pusapati Intelligence
 
-The site has an Intelligence link, a floating launcher, and `/intelligence`. Visitors can chat without creating an account. The server validates and bounds messages, limits each IP to 10 requests per minute using Neon, retrieves relevant public website information and published CMS records, and calls OpenAI using the server-only `OPENAI_API_KEY`. Answers can cite relevant public pages.
+The site has an Intelligence link, a floating launcher, and `/intelligence`. Visitors can chat without creating an account. The server validates and bounds messages, limits each IP to 10 requests per minute using Neon, retrieves relevant public website information and published CMS records, and calls Gemini using the server-only `GEMINI_API_KEY`. Answers can cite relevant public pages.
 
-The chat is public and AI requests incur OpenAI charges. The draft Knowledge Base PDF is intentionally excluded; do not index it unless an approved public edition is provided. Before enabling production chat, configure the OpenAI key, Neon connection, and `db/intelligence-rate-limits.sql` migration.
+The chat is public and Gemini usage may be subject to Google AI Studio quotas, rate limits, or billing requirements; a free tier is not guaranteed. The draft Knowledge Base PDF is intentionally excluded; do not index it unless an approved public edition is provided. Before enabling production chat, configure the Gemini key, Neon connection, and `db/intelligence-rate-limits.sql` migration.
 
 ## Build and deploy
 

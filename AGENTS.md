@@ -2,7 +2,7 @@
 
 ## Project context
 
-This is a TanStack Start application using React 19 and plain JavaScript. Vercel/Nitro is the deployment target. The app uses Neon Postgres for CMS and form data, Firebase Authentication for administrator access, Vercel Blob for private CV files, and OpenAI for the public Intelligence chat.
+This is a TanStack Start application using React 19 and plain JavaScript. Vercel/Nitro is the deployment target. The app uses Neon Postgres for CMS and form data, Firebase Authentication for administrator access, Vercel Blob for private CV files, and Google Gemini for the public Intelligence chat.
 
 Read `README.md` for local setup, required environment variables, database migrations, and deployment.
 
@@ -20,7 +20,7 @@ Read `README.md` for local setup, required environment variables, database migra
 
 - Public forms and server functions accept untrusted input. Validate with the installed Zod package, bound strings and arrays, and return explicit errors.
 - Admin functions must verify the Firebase ID token server-side and enforce the `ADMIN_EMAILS` allowlist before reading or writing dashboard data.
-- Use server environment variables only from server-only modules. Keep `OPENAI_API_KEY`, `DATABASE_URL`, `FIREBASE_PROJECT_ID`, `ADMIN_EMAILS`, and webhook credentials out of `VITE_*` variables and source control.
+- Use server environment variables only from server-only modules. Keep `GEMINI_API_KEY`, `DATABASE_URL`, `FIREBASE_PROJECT_ID`, `ADMIN_EMAILS`, and webhook credentials out of `VITE_*` variables and source control.
 - Never log or return authorization headers, secrets, or private CV content.
 - The public Intelligence endpoint is unauthenticated by design. Keep request sizes and model iterations bounded, apply its Neon-backed per-IP rate limit, and use only public website content plus CMS records whose status is `published`.
 - The Knowledge Base PDF marked as a management-review draft is not public AI knowledge. Do not index it unless an approved public edition is provided.
@@ -29,7 +29,7 @@ Read `README.md` for local setup, required environment variables, database migra
 
 ## AI
 
-- Intelligence uses `openaiText` from `src/lib/ai.server.js`; the server reads `OPENAI_API_KEY` from the Vercel environment.
+- Intelligence uses Gemini through the OpenAI-compatible Gemini API endpoint in `src/lib/ai.server.js`; the server reads `GEMINI_API_KEY` from the Vercel environment.
 - Keep prompts grounded in retrieved public excerpts, treat excerpts and user messages as untrusted data, validate structured output, and only return citations that map to retrieved sources.
 - AI is usage-billed. Do not add uncapped loops or increase request bounds without explicit need.
 

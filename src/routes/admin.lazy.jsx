@@ -41,9 +41,11 @@ import { projects, qualityStages } from "@/data/catalogue";
 import { companies, engines } from "@/data/group";
 import {
   createAdminDocument,
+  deleteAdminDocument as deleteAdminDocumentRecord,
   deleteAdminSubmission,
   getAdminDashboardData,
   getDailyAdminReport,
+  getOverallAdminReport,
   saveAdminContent,
   updateAdminSubmission,
   verifyAdminSession,
@@ -173,6 +175,137 @@ const formatIndiaDateTime = (value) => new Intl.DateTimeFormat("en-IN", {
   timeStyle: "short",
   timeZone: "Asia/Kolkata",
 }).format(new Date(value));
+const downloadReportPdf = async (report, scope) => {
+  const { default: jsPDF } = await import("jspdf");
+  const pdf = new jsPDF({ orientation: "landscape" });
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = 12;
+  const tableWidths = [42, 56, 52, 40, pageWidth - (margin * 2) - 190];
+  const counts = Object.fromEntries(reportTypes.map(([type]) => [
+    type,
+    report.records.filter((record) => record.type === type).length,
+  ]));
+  const statuses = report.records.reduce((result, record) => {
+    result[record.status] = (result[record.status] || 0) + 1;
+    return result;
+  }, {});
+  const reportPeriod = scope === "daily"
+    ? `Date: ${report.date} (India Standard Time)`
+    : `Period: All submissions to date · generated ${formatIndiaDateTime(report.generatedAt)} (India Standard Time)`;
+  const title = scope === "daily" ? "Daily submissions report" : "Overall submissions report";
+
+  pdf.setFontSize(16);
+  pdf.text(`Pusapati Group - ${title}`, margin, 16);
+  pdf.setFontSize(9);
+  pdf.text(reportPeriod, margin, 23);
+  pdf.setFontSize(11);
+  pdf.text("Summary", margin, 34);
+  pdf.setFontSize(9);
+  pdf.text(`Total submissions: ${report.records.length}`, margin, 41);
+  let summaryY = 48;
+  for (const [type, label] of reportTypes) {
+    pdf.text(`${label}: ${counts[type]}`, margin, summaryY);
+    summaryY += 5;
+  }
+  const statusSummary = Object.entries(statuses)
+    .map(([status, count]) => `${capitalize(status)}: ${count}`)
+    .join("  |  ") || "No statuses";
+  const statusLines = pdf.splitTextToSize(`Statuses: ${statusSummary}`, pageWidth - (margin * 2));
+  pdf.text(statusLines, margin, summaryY + 1);
+  summaryY += statusLines.length * 4 + 5;
+  const contentsLines = pdf.splitTextToSize(
+    "Table fields: submission ID, name, form type, status, and submitted time. Message contents and uploaded files are not included.",
+    pageWidth - (margin * 2),
+  );
+  pdf.text(contentsLines, margin, summaryY);
+  summaryY += contentsLines.length * 4 + 5;
+
+  const drawTableHeader = (y) => {
+    const labels = ["Submission ID", "Name", "Form type", "Status", "Submitted at (IST)"];
+    let x = margin;
+    pdf.setFontSize(8);
+    pdf.setFillColor(242, 244, 246);
+    pdf.setDrawColor(210, 216, 224);
+    labels.forEach((label, index) => {
+      pdf.rect(x, y, tableWidths[index], 9, "FD");
+      pdf.text(label, x + 2, y + 6);
+      x += tableWidths[index];
+    });
+    return y + 9;
+  };
+  let tableY = drawTableHeader(summaryY);
+  if (!report.records.length) {
+    pdf.setFontSize(8);
+    pdf.text("No submissions were received for this report.", margin + 2, tableY + 7);
+  }
+
+  for (const record of report.records) {
+    const values = [
+      `${record.type}:${record.id}`,
+      record.name || "Not provided",
+      reportTypes.find(([type]) => type === record.type)?.[1] || record.type,
+      capitalize(record.status),
+      formatIndiaDateTime(record.createdAt),
+    ];
+    const lines = values.map((value, index) => pdf.splitTextToSize(
+      String(value).replace(/\s+/g, " ").trim(),
+      tableWidths[index] - 4,
+    ));
+    const rowHeight = Math.max(9, ...lines.map((cellLines) => cellLines.length * 4 + 4));
+    if (tableY + rowHeight > pageHeight - 12) {
+      pdf.addPage();
+      tableY = drawTableHeader(12);
+    }
+
+    let x = margin;
+    pdf.setFontSize(7);
+    pdf.setDrawColor(224, 228, 232);
+    lines.forEach((cellLines, index) => {
+      pdf.rect(x, tableY, tableWidths[index], rowHeight);
+      pdf.text(cellLines, x + 2, tableY + 5);
+      x += tableWidths[index];
+    });
+    tableY += rowHeight;
+  }
+
+  const pageCount = pdf.getNumberOfPages();
+  for (let page = 1; page <= pageCount; page += 1) {
+    pdf.setPage(page);
+    pdf.setFontSize(7);
+    pdf.text(`Page ${page} of ${pageCount}`, pageWidth - margin, pageHeight - 5, { align: "right" });
+  }
+  const suffix = scope === "daily" ? report.date : `overall-${indiaDate()}`;
+  pdf.save(`pusapati-${suffix}-report.pdf`);
+};
+const downloadReportCsv = (report, scope) => {
+  const escapeCell = (value) => {
+    let cell = String(value ?? "").replace(/\r?\n/g, " ");
+    if (/^\s*[=+\-@]/.test(cell)) cell = `'${cell}`;
+    return `"${cell.replaceAll('"', '""')}"`;
+  };
+  const rows = [
+    ["Submission ID", "Name", "Type", "Status", "Submitted at (India time)"],
+    ...report.records.map((record) => [
+      `${record.type}:${record.id}`,
+      record.name,
+      reportTypes.find(([type]) => type === record.type)?.[1] || record.type,
+      record.status,
+      formatIndiaDateTime(record.createdAt),
+    ]),
+  ];
+  const csv = `\uFEFF${rows.map((row) => row.map(escapeCell).join(",")).join("\r\n")}`;
+  const file = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(file);
+  const link = document.createElement("a");
+  link.href = url;
+  const suffix = scope === "daily" ? report.date : `overall-${indiaDate()}`;
+  link.download = `pusapati-${suffix}-report.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
 
 function AdminRoute() {
   const [preview, setPreview] = useState(null);
@@ -389,9 +522,24 @@ function AdminDashboard({ initialData, adminEmail }) {
     }
   };
 
-  const fetchDailyReport = async (date) => getDailyAdminReport({
-    data: { idToken: await getAdminToken(), date },
-  });
+  const removeAdminDocument = async (item) => {
+    if (!window.confirm(`Permanently delete "${item.title}" and its stored file? This cannot be undone.`)) return;
+    try {
+      await deleteAdminDocumentRecord({
+        data: { idToken: await getAdminToken(), id: item.id },
+      });
+      persist({ ...data, documents: data.documents.filter((document) => document.id !== item.id) });
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Could not delete this document.");
+    }
+  };
+
+  const fetchAdminReport = async (scope, date) => {
+    const idToken = await getAdminToken();
+    return scope === "daily"
+      ? getDailyAdminReport({ data: { idToken, date } })
+      : getOverallAdminReport({ data: { idToken } });
+  };
 
   const selectedSubmission = data.submissions.find((submission) => submission.id === selectedId);
   const visibleSubmissions = useMemo(() => {
@@ -875,9 +1023,10 @@ function AdminDashboard({ initialData, adminEmail }) {
                 documents={data.documents}
                 onUpload={uploadAdminDocument}
                 onDownload={downloadAdminDocument}
+                onDelete={removeAdminDocument}
               />
             )}
-            {activeModule === "reports" && <ReportsManager onGetReport={fetchDailyReport} />}
+            {activeModule === "reports" && <ReportsManager onGetReport={fetchAdminReport} />}
             {activeModule === "employees" && <EmployeesManager employees={data.employees} />}
             {activeModule === "audit" && <AuditManager activity={data.activity} />}
           </main>
@@ -1319,7 +1468,7 @@ function InfoField({ label, value }) {
   return <div className="min-w-0"><p className="text-[9px] font-semibold uppercase tracking-wide text-slate">{label}</p><p className="mt-1 truncate text-[11px] font-medium">{value || "Not provided"}</p></div>;
 }
 
-function DocumentsManager({ documents, onUpload, onDownload }) {
+function DocumentsManager({ documents, onUpload, onDownload, onDelete }) {
   const [file, setFile] = useState(null);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("General");
@@ -1387,6 +1536,9 @@ function DocumentsManager({ documents, onUpload, onDownload }) {
             <Button type="button" variant="outline" size="sm" onClick={() => onDownload(item)} className="h-8 rounded-lg text-[11px]">
               <Download className="h-3.5 w-3.5" /> Download
             </Button>
+            <Button type="button" variant="destructive" size="sm" onClick={() => onDelete(item)} className="h-8 rounded-lg text-[11px]">
+              <Trash2 className="h-3.5 w-3.5" /> Delete
+            </Button>
           </div>
         ))}
       </div>
@@ -1401,89 +1553,69 @@ function ReportsManager({ onGetReport }) {
   const [error, setError] = useState("");
   const [lastReport, setLastReport] = useState(null);
 
-  const downloadReport = async (format) => {
-    setBusy(format);
+  const downloadReport = async (scope, format) => {
+    const task = `${scope}-${format}`;
+    setBusy(task);
     setError("");
     try {
-      const report = await onGetReport(date);
+      const report = await onGetReport(scope, scope === "daily" ? date : undefined);
       const counts = Object.fromEntries(reportTypes.map(([type]) => [
         type,
         report.records.filter((record) => record.type === type).length,
       ]));
-      setLastReport({ date: report.date, total: report.records.length, counts });
+      setLastReport({
+        scope,
+        period: scope === "daily"
+          ? report.date
+          : `All submissions to date · through ${formatIndiaDateTime(report.generatedAt)}`,
+        total: report.records.length,
+        counts,
+      });
 
-      if (format === "pdf") {
-        const { default: jsPDF } = await import("jspdf");
-        const pdf = new jsPDF();
-        pdf.setFontSize(18);
-        pdf.text("Pusapati Group - Daily submissions report", 14, 20);
-        pdf.setFontSize(11);
-        pdf.text(`Date: ${report.date} (India time)`, 14, 30);
-        pdf.text(`Total submissions: ${report.records.length}`, 14, 40);
-        pdf.setFontSize(12);
-        let y = 55;
-        for (const [type, label] of reportTypes) {
-          pdf.text(`${label}: ${counts[type]}`, 16, y);
-          y += 9;
-        }
-        if (!report.records.length) {
-          pdf.setFontSize(10);
-          pdf.text("No submissions were received on this date.", 14, y + 3);
-        }
-        pdf.save(`pusapati-daily-report-${report.date}.pdf`);
-      } else {
-        const escapeCell = (value) => {
-          let cell = String(value ?? "").replace(/\r?\n/g, " ");
-          if (/^\s*[=+\-@]/.test(cell)) cell = `'${cell}`;
-          return `"${cell.replaceAll('"', '""')}"`;
-        };
-        const rows = [
-          ["Submission ID", "Name", "Type", "Status", "Submitted at (India time)"],
-          ...report.records.map((record) => [
-            `${record.type}:${record.id}`,
-            record.name,
-            reportTypes.find(([type]) => type === record.type)?.[1] || record.type,
-            record.status,
-            formatIndiaDateTime(record.createdAt),
-          ]),
-        ];
-        const csv = `\uFEFF${rows.map((row) => row.map(escapeCell).join(",")).join("\r\n")}`;
-        const file = new Blob([csv], { type: "text/csv;charset=utf-8" });
-        const url = URL.createObjectURL(file);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `pusapati-daily-report-${report.date}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-      }
+      if (format === "pdf") await downloadReportPdf(report, scope);
+      else downloadReportCsv(report, scope);
     } catch (reportError) {
-      setError(reportError instanceof Error ? reportError.message : "Could not create the daily report.");
+      setError(reportError instanceof Error ? reportError.message : "Could not create the report.");
     } finally {
       setBusy("");
     }
   };
 
   return (
-    <ModulePanel title="Reports & analytics" intro="Download a daily report of submissions received on the selected date. Dates use India Standard Time." icon={Activity}>
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="block">
-          <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wide text-slate">Report date</span>
-          <input type="date" value={date} onChange={(event) => setDate(event.target.value)} className="h-10 rounded-lg border border-ink/12 bg-white px-3 text-xs outline-none focus:border-orange-400" />
-        </label>
-        <Button type="button" onClick={() => downloadReport("pdf")} disabled={Boolean(busy) || !date} className="rounded-lg bg-[#e2701b] text-white hover:bg-[#ca6011]">
-          <Download className="h-4 w-4" /> {busy === "pdf" ? "Preparing PDF…" : "Download PDF summary"}
-        </Button>
-        <Button type="button" variant="outline" onClick={() => downloadReport("csv")} disabled={Boolean(busy) || !date} className="rounded-lg">
-          <Download className="h-4 w-4" /> {busy === "csv" ? "Preparing CSV…" : "Download CSV details"}
-        </Button>
-      </div>
-      <p className="mt-3 text-[11px] text-slate">The PDF contains totals by form. The CSV lists each submission’s name, type, status, and time; it does not include message contents or uploaded files.</p>
+    <ModulePanel title="Reports & analytics" intro="Download daily or all-time submission reports. Daily dates and timestamps use India Standard Time." icon={Activity}>
+      <section className="rounded-lg border border-ink/8 p-4">
+        <h4 className="text-xs font-semibold">Daily report</h4>
+        <p className="mt-1 text-[11px] text-slate">Choose a date to report submissions received that day.</p>
+        <div className="mt-3 flex flex-wrap items-end gap-3">
+          <label className="block">
+            <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wide text-slate">Report date</span>
+            <input type="date" value={date} onChange={(event) => setDate(event.target.value)} className="h-10 rounded-lg border border-ink/12 bg-white px-3 text-xs outline-none focus:border-orange-400" />
+          </label>
+          <Button type="button" onClick={() => downloadReport("daily", "pdf")} disabled={Boolean(busy) || !date} className="rounded-lg bg-[#e2701b] text-white hover:bg-[#ca6011]">
+            <Download className="h-4 w-4" /> {busy === "daily-pdf" ? "Preparing PDF…" : "Download daily PDF"}
+          </Button>
+          <Button type="button" variant="outline" onClick={() => downloadReport("daily", "csv")} disabled={Boolean(busy) || !date} className="rounded-lg">
+            <Download className="h-4 w-4" /> {busy === "daily-csv" ? "Preparing CSV…" : "Download daily CSV"}
+          </Button>
+        </div>
+      </section>
+      <section className="mt-4 rounded-lg border border-ink/8 p-4">
+        <h4 className="text-xs font-semibold">Overall report</h4>
+        <p className="mt-1 text-[11px] text-slate">Includes all non-deleted submissions stored to date across all five form types.</p>
+        <div className="mt-3 flex flex-wrap gap-3">
+          <Button type="button" onClick={() => downloadReport("overall", "pdf")} disabled={Boolean(busy)} className="rounded-lg bg-[#e2701b] text-white hover:bg-[#ca6011]">
+            <Download className="h-4 w-4" /> {busy === "overall-pdf" ? "Preparing PDF…" : "Download overall PDF"}
+          </Button>
+          <Button type="button" variant="outline" onClick={() => downloadReport("overall", "csv")} disabled={Boolean(busy)} className="rounded-lg">
+            <Download className="h-4 w-4" /> {busy === "overall-csv" ? "Preparing CSV…" : "Download overall CSV"}
+          </Button>
+        </div>
+      </section>
+      <p className="mt-3 text-[11px] text-slate">PDFs include an executive summary and a table of submission ID, name, form type, status, and time. CSV files contain the same table. Message contents and uploaded files are excluded.</p>
       {error && <p role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">{error}</p>}
       {lastReport && (
         <div className="mt-5 rounded-lg border border-ink/8 bg-paper/50 p-4">
-          <p className="text-xs font-semibold">Report ready for {lastReport.date} · {lastReport.total} submissions</p>
+          <p className="text-xs font-semibold">{lastReport.scope === "daily" ? "Daily report" : "Overall report"} ready · {lastReport.period} · {lastReport.total} submissions</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {reportTypes.map(([type, label]) => <p key={type} className="text-[11px] text-slate">{label}: <strong className="text-ink">{lastReport.counts[type]}</strong></p>)}
           </div>

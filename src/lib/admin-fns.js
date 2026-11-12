@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { head } from "@vercel/blob";
+import { del, head } from "@vercel/blob";
 import { verifyAdminIdToken } from "@/lib/admin-auth.server";
 import { fetchPublishedSiteContent } from "@/lib/public-site-content.server";
 import { neon } from "@neondatabase/serverless";
@@ -40,6 +40,10 @@ const createDocumentSchema = z.object({
   category: z.string().trim().min(1).max(80),
   filename: z.string().trim().min(1).max(255).refine((value) => !/[\r\n]/.test(value)),
 });
+const deleteDocumentSchema = z.object({
+  idToken: z.string().min(1).max(8192),
+  id: z.string().regex(/^[a-f0-9-]{36}$/),
+});
 const dailyReportSchema = z.object({
   idToken: z.string().min(1).max(8192),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
@@ -63,6 +67,47 @@ async function getSql() {
     throw new Error("Missing required DATABASE_URL secret for the admin dashboard.");
   }
   return neon(connectionString);
+}
+
+async function getAdminReportRecords(date) {
+  const sql = await getSql();
+  const start = date ? new Date(`${date}T00:00:00.000+05:30`) : null;
+  const end = start ? new Date(start.getTime() + 24 * 60 * 60 * 1000) : null;
+  const startAt = start?.toISOString() ?? null;
+  const endAt = end?.toISOString() ?? null;
+  const records = await sql`
+    SELECT type, id, name, status, "createdAt"
+    FROM (
+      SELECT 'enquiry'::text AS type, id::text AS id, name, status,
+        created_at AS "createdAt"
+      FROM quote_enquiries
+      WHERE status <> 'deleted'
+      UNION ALL
+      SELECT 'contact'::text, id::text, name, status, created_at
+      FROM contact_messages
+      WHERE status <> 'deleted'
+      UNION ALL
+      SELECT 'vendor'::text, id::text, contact_name, status, created_at
+      FROM vendor_applications
+      WHERE status <> 'deleted'
+      UNION ALL
+      SELECT 'career'::text, id::text, full_name, status, created_at
+      FROM career_applications
+      WHERE status <> 'deleted'
+      UNION ALL
+      SELECT 'investor'::text, id::text, full_name, status, created_at
+      FROM investor_requests
+      WHERE status <> 'deleted'
+    ) AS submissions
+    WHERE (${startAt}::timestamptz IS NULL OR "createdAt" >= ${startAt}::timestamptz)
+      AND (${endAt}::timestamptz IS NULL OR "createdAt" < ${endAt}::timestamptz)
+    ORDER BY "createdAt" ASC
+    LIMIT 5001
+  `;
+  if (records.length > 5000) {
+    throw new Error("This report contains more than 5,000 submissions. Please narrow the date range.");
+  }
+  return records;
 }
 
 function mapSubmission(row, type) {
@@ -200,52 +245,45 @@ export const createAdminDocument = createServerFn({ method: "POST" })
     return { document };
   });
 
+export const deleteAdminDocument = createServerFn({ method: "POST" })
+  .validator(deleteDocumentSchema)
+  .handler(async ({ data }) => {
+    await verifyAdminIdToken(data.idToken);
+    const sql = await getSql();
+    const [record] = await sql`
+      SELECT pathname
+      FROM admin_documents
+      WHERE document_id = ${data.id}
+    `;
+    if (!record) throw new Error("The requested document was not found.");
+    if (!/^admin-documents\/[a-f0-9-]{36}\.(pdf|doc|docx|xls|xlsx|csv)$/.test(record.pathname)) {
+      throw new Error("The document record has an invalid storage path.");
+    }
+
+    await del(record.pathname);
+    const [deleted] = await sql`
+      DELETE FROM admin_documents
+      WHERE document_id = ${data.id}
+      RETURNING document_id
+    `;
+    if (!deleted) throw new Error("The document record was not found after its file was removed.");
+    return { ok: true };
+  });
+
 export const getDailyAdminReport = createServerFn({ method: "POST" })
   .validator(dailyReportSchema)
   .handler(async ({ data }) => {
     await verifyAdminIdToken(data.idToken);
-    const sql = await getSql();
-    const records = await sql`
-      SELECT type, id, name, status, "createdAt"
-      FROM (
-        SELECT 'enquiry'::text AS type, id::text AS id, name, status,
-          created_at AS "createdAt"
-        FROM quote_enquiries
-        WHERE status <> 'deleted'
-          AND created_at >= (${data.date}::date::timestamp AT TIME ZONE 'Asia/Kolkata')
-          AND created_at < ((${data.date}::date + 1)::timestamp AT TIME ZONE 'Asia/Kolkata')
-        UNION ALL
-        SELECT 'contact'::text, id::text, name, status, created_at
-        FROM contact_messages
-        WHERE status <> 'deleted'
-          AND created_at >= (${data.date}::date::timestamp AT TIME ZONE 'Asia/Kolkata')
-          AND created_at < ((${data.date}::date + 1)::timestamp AT TIME ZONE 'Asia/Kolkata')
-        UNION ALL
-        SELECT 'vendor'::text, id::text, contact_name, status, created_at
-        FROM vendor_applications
-        WHERE status <> 'deleted'
-          AND created_at >= (${data.date}::date::timestamp AT TIME ZONE 'Asia/Kolkata')
-          AND created_at < ((${data.date}::date + 1)::timestamp AT TIME ZONE 'Asia/Kolkata')
-        UNION ALL
-        SELECT 'career'::text, id::text, full_name, status, created_at
-        FROM career_applications
-        WHERE status <> 'deleted'
-          AND created_at >= (${data.date}::date::timestamp AT TIME ZONE 'Asia/Kolkata')
-          AND created_at < ((${data.date}::date + 1)::timestamp AT TIME ZONE 'Asia/Kolkata')
-        UNION ALL
-        SELECT 'investor'::text, id::text, full_name, status, created_at
-        FROM investor_requests
-        WHERE status <> 'deleted'
-          AND created_at >= (${data.date}::date::timestamp AT TIME ZONE 'Asia/Kolkata')
-          AND created_at < ((${data.date}::date + 1)::timestamp AT TIME ZONE 'Asia/Kolkata')
-      ) AS daily_submissions
-      ORDER BY "createdAt" ASC
-      LIMIT 5001
-    `;
-    if (records.length > 5000) {
-      throw new Error("This date has more than 5,000 submissions. Please contact support for a complete report.");
-    }
+    const records = await getAdminReportRecords(data.date);
     return { date: data.date, records };
+  });
+
+export const getOverallAdminReport = createServerFn({ method: "POST" })
+  .validator(idTokenSchema)
+  .handler(async ({ data }) => {
+    await verifyAdminIdToken(data.idToken);
+    const records = await getAdminReportRecords();
+    return { generatedAt: new Date().toISOString(), records };
   });
 
 export const deleteAdminSubmission = createServerFn({ method: "POST" })

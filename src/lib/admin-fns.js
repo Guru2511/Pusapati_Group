@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { head } from "@vercel/blob";
 import { verifyAdminIdToken } from "@/lib/admin-auth.server";
 import { fetchPublishedSiteContent } from "@/lib/public-site-content.server";
 import { neon } from "@neondatabase/serverless";
@@ -32,6 +33,29 @@ const deleteSubmissionSchema = z.object({
   idToken: z.string().min(1).max(8192),
   id: z.string().regex(/^(enquiry|contact|vendor|career|investor):\d{1,19}$/),
 });
+const createDocumentSchema = z.object({
+  idToken: z.string().min(1).max(8192),
+  pathname: z.string().regex(/^admin-documents\/[a-f0-9-]{36}\.(pdf|doc|docx|xls|xlsx|csv)$/),
+  title: z.string().trim().min(1).max(200),
+  category: z.string().trim().min(1).max(80),
+  filename: z.string().trim().min(1).max(255).refine((value) => !/[\r\n]/.test(value)),
+});
+const dailyReportSchema = z.object({
+  idToken: z.string().min(1).max(8192),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
+    const parsed = new Date(`${value}T00:00:00.000Z`);
+    return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+  }, "Choose a valid report date."),
+});
+
+const adminDocumentTypes = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "text/csv",
+]);
 
 async function getSql() {
   const connectionString = await getSecret("DATABASE_URL");
@@ -61,7 +85,7 @@ export const getAdminDashboardData = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     await verifyAdminIdToken(data.idToken);
     const sql = await getSql();
-    const [content, enquiries, contacts, vendors, careers, investors] = await Promise.all([
+    const [content, enquiries, contacts, vendors, careers, investors, documents] = await Promise.all([
       sql`
         SELECT content_id AS id, category, title, path, fields, status,
           published_fields AS "publishedFields",
@@ -125,6 +149,14 @@ export const getAdminDashboardData = createServerFn({ method: "POST" })
         ORDER BY created_at DESC
         LIMIT 500
       `,
+      sql`
+        SELECT document_id AS id, title, category, filename,
+          content_type AS "contentType", file_size AS "fileSize",
+          uploaded_by AS "uploadedBy", uploaded_at AS "uploadedAt"
+        FROM admin_documents
+        ORDER BY uploaded_at DESC
+        LIMIT 1000
+      `,
     ]);
     const submissions = [
       ...enquiries.map((row) => mapSubmission(row, "enquiry")),
@@ -133,7 +165,87 @@ export const getAdminDashboardData = createServerFn({ method: "POST" })
       ...careers.map((row) => mapSubmission(row, "career")),
       ...investors.map((row) => mapSubmission(row, "investor")),
     ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 500);
-    return { content, submissions };
+    return { content, submissions, documents };
+  });
+
+export const createAdminDocument = createServerFn({ method: "POST" })
+  .validator(createDocumentSchema)
+  .handler(async ({ data }) => {
+    const admin = await verifyAdminIdToken(data.idToken);
+    const blob = await head(data.pathname);
+    if (
+      blob.pathname !== data.pathname
+      || !adminDocumentTypes.has(blob.contentType)
+      || blob.size < 1
+      || blob.size > 20 * 1024 * 1024
+    ) {
+      throw new Error("The uploaded file does not meet the document centre requirements.");
+    }
+
+    const sql = await getSql();
+    const [document] = await sql`
+      INSERT INTO admin_documents (
+        document_id, pathname, title, category, filename, content_type,
+        file_size, uploaded_by
+      ) VALUES (
+        ${data.pathname.slice("admin-documents/".length).replace(/\.[^.]+$/, "")},
+        ${data.pathname}, ${data.title}, ${data.category},
+        ${data.filename}, ${blob.contentType}, ${blob.size},
+        ${admin.email}
+      )
+      RETURNING document_id AS id, title, category, filename,
+        content_type AS "contentType", file_size AS "fileSize",
+        uploaded_by AS "uploadedBy", uploaded_at AS "uploadedAt"
+    `;
+    return { document };
+  });
+
+export const getDailyAdminReport = createServerFn({ method: "POST" })
+  .validator(dailyReportSchema)
+  .handler(async ({ data }) => {
+    await verifyAdminIdToken(data.idToken);
+    const sql = await getSql();
+    const records = await sql`
+      SELECT type, id, name, status, "createdAt"
+      FROM (
+        SELECT 'enquiry'::text AS type, id::text AS id, name, status,
+          created_at AS "createdAt"
+        FROM quote_enquiries
+        WHERE status <> 'deleted'
+          AND created_at >= (${data.date}::date::timestamp AT TIME ZONE 'Asia/Kolkata')
+          AND created_at < ((${data.date}::date + 1)::timestamp AT TIME ZONE 'Asia/Kolkata')
+        UNION ALL
+        SELECT 'contact'::text, id::text, name, status, created_at
+        FROM contact_messages
+        WHERE status <> 'deleted'
+          AND created_at >= (${data.date}::date::timestamp AT TIME ZONE 'Asia/Kolkata')
+          AND created_at < ((${data.date}::date + 1)::timestamp AT TIME ZONE 'Asia/Kolkata')
+        UNION ALL
+        SELECT 'vendor'::text, id::text, contact_name, status, created_at
+        FROM vendor_applications
+        WHERE status <> 'deleted'
+          AND created_at >= (${data.date}::date::timestamp AT TIME ZONE 'Asia/Kolkata')
+          AND created_at < ((${data.date}::date + 1)::timestamp AT TIME ZONE 'Asia/Kolkata')
+        UNION ALL
+        SELECT 'career'::text, id::text, full_name, status, created_at
+        FROM career_applications
+        WHERE status <> 'deleted'
+          AND created_at >= (${data.date}::date::timestamp AT TIME ZONE 'Asia/Kolkata')
+          AND created_at < ((${data.date}::date + 1)::timestamp AT TIME ZONE 'Asia/Kolkata')
+        UNION ALL
+        SELECT 'investor'::text, id::text, full_name, status, created_at
+        FROM investor_requests
+        WHERE status <> 'deleted'
+          AND created_at >= (${data.date}::date::timestamp AT TIME ZONE 'Asia/Kolkata')
+          AND created_at < ((${data.date}::date + 1)::timestamp AT TIME ZONE 'Asia/Kolkata')
+      ) AS daily_submissions
+      ORDER BY "createdAt" ASC
+      LIMIT 5001
+    `;
+    if (records.length > 5000) {
+      throw new Error("This date has more than 5,000 submissions. Please contact support for a complete report.");
+    }
+    return { date: data.date, records };
   });
 
 export const deleteAdminSubmission = createServerFn({ method: "POST" })

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createLazyFileRoute, Link } from "@tanstack/react-router";
 import { createClientOnlyFn } from "@tanstack/react-start";
 import { onAuthStateChanged, signOut } from "firebase/auth";
+import { upload } from "@vercel/blob/client";
 import {
   Activity,
   ArrowDownRight,
@@ -13,6 +14,7 @@ import {
   Check,
   CircleHelp,
   ClipboardList,
+  Download,
   FileText,
   FolderKanban,
   LayoutDashboard,
@@ -29,6 +31,7 @@ import {
   SlidersHorizontal,
   Sparkles,
   Trash2,
+  Upload,
   UsersRound,
   X,
 } from "lucide-react";
@@ -36,7 +39,15 @@ import { Button } from "@/components/ui/button";
 import { adminPreviewDefaults } from "@/data/adminPreview";
 import { projects, qualityStages } from "@/data/catalogue";
 import { companies, engines } from "@/data/group";
-import { deleteAdminSubmission, getAdminDashboardData, saveAdminContent, updateAdminSubmission, verifyAdminSession } from "@/lib/admin-fns";
+import {
+  createAdminDocument,
+  deleteAdminSubmission,
+  getAdminDashboardData,
+  getDailyAdminReport,
+  saveAdminContent,
+  updateAdminSubmission,
+  verifyAdminSession,
+} from "@/lib/admin-fns";
 
 export const Route = createLazyFileRoute("/admin")({ component: AdminRoute });
 const getFirebaseClient = createClientOnlyFn(() => import("@/lib/firebase.client"));
@@ -132,6 +143,36 @@ const getAdminToken = async () => {
   const { getAdminIdToken } = await getFirebaseClient();
   return getAdminIdToken();
 };
+const documentTypes = {
+  pdf: "application/pdf",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xls: "application/vnd.ms-excel",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  csv: "text/csv",
+};
+const reportTypes = [
+  ["enquiry", "Customer enquiries"],
+  ["contact", "Contact messages"],
+  ["vendor", "Vendor applications"],
+  ["career", "Career applications"],
+  ["investor", "Investor requests"],
+];
+const indiaDate = () => {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return `${values.year}-${values.month}-${values.day}`;
+};
+const formatIndiaDateTime = (value) => new Intl.DateTimeFormat("en-IN", {
+  dateStyle: "medium",
+  timeStyle: "short",
+  timeZone: "Asia/Kolkata",
+}).format(new Date(value));
 
 function AdminRoute() {
   const [preview, setPreview] = useState(null);
@@ -194,6 +235,7 @@ function AdminRoute() {
               content: [...content.values()],
               publishedContent,
               submissions: database.submissions,
+              documents: database.documents,
             });
             setAdminEmail(user.email || "");
             setLoadError("");
@@ -293,6 +335,63 @@ function AdminDashboard({ initialData, adminEmail }) {
       setSaveError(error instanceof Error ? error.message : "Could not download this document.");
     }
   };
+
+  const uploadAdminDocument = async ({ file, title, category }) => {
+    setSaveError("");
+    try {
+      const extension = file.name.split(".").pop()?.toLowerCase();
+      const contentType = documentTypes[extension];
+      if (!contentType || file.size < 1 || file.size > 20 * 1024 * 1024) {
+        throw new Error("Choose a PDF, Word, Excel, or CSV document no larger than 20 MB.");
+      }
+      const idToken = await getAdminToken();
+      const blob = await upload(
+        `admin-documents/${crypto.randomUUID()}.${extension}`,
+        file,
+        {
+          access: "private",
+          handleUploadUrl: "/api/admin-documents-upload",
+          contentType,
+          headers: { Authorization: `Bearer ${idToken}` },
+        },
+      );
+      const { document } = await createAdminDocument({
+        data: { idToken, pathname: blob.pathname, title, category, filename: file.name },
+      });
+      persist({ ...data, documents: [document, ...data.documents] });
+      return true;
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Could not upload this document.");
+      return false;
+    }
+  };
+
+  const downloadAdminDocument = async (item) => {
+    try {
+      const idToken = await getAdminToken();
+      const response = await fetch(`/api/admin-documents-download?id=${encodeURIComponent(item.id)}`, {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({}));
+        throw new Error(result.error || "Could not download this document.");
+      }
+      const fileUrl = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a");
+      link.href = fileUrl;
+      link.download = item.filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(fileUrl);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Could not download this document.");
+    }
+  };
+
+  const fetchDailyReport = async (date) => getDailyAdminReport({
+    data: { idToken: await getAdminToken(), date },
+  });
 
   const selectedSubmission = data.submissions.find((submission) => submission.id === selectedId);
   const visibleSubmissions = useMemo(() => {
@@ -771,8 +870,14 @@ function AdminDashboard({ initialData, adminEmail }) {
                 onDownloadCv={downloadSubmissionFile}
               />
             )}
-            {activeModule === "documents" && <DocumentsManager documents={data.documents} />}
-            {activeModule === "reports" && <ReportsManager submissions={data.submissions} />}
+            {activeModule === "documents" && (
+              <DocumentsManager
+                documents={data.documents}
+                onUpload={uploadAdminDocument}
+                onDownload={downloadAdminDocument}
+              />
+            )}
+            {activeModule === "reports" && <ReportsManager onGetReport={fetchDailyReport} />}
             {activeModule === "employees" && <EmployeesManager employees={data.employees} />}
             {activeModule === "audit" && <AuditManager activity={data.activity} />}
           </main>
@@ -1214,23 +1319,176 @@ function InfoField({ label, value }) {
   return <div className="min-w-0"><p className="text-[9px] font-semibold uppercase tracking-wide text-slate">{label}</p><p className="mt-1 truncate text-[11px] font-medium">{value || "Not provided"}</p></div>;
 }
 
-function DocumentsManager({ documents }) {
+function DocumentsManager({ documents, onUpload, onDownload }) {
+  const [file, setFile] = useState(null);
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState("General");
+  const [error, setError] = useState("");
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    setError("");
+    if (!file) {
+      setError("Choose a document to upload.");
+      return;
+    }
+    if (!title.trim() || !category.trim()) {
+      setError("Enter a title and category.");
+      return;
+    }
+
+    setUploading(true);
+    const saved = await onUpload({ file, title: title.trim(), category: category.trim() });
+    setUploading(false);
+    if (saved) {
+      setFile(null);
+      setTitle("");
+      setCategory("General");
+      form.reset();
+    }
+  };
+
   return (
-    <ModulePanel title="Document centre" intro="No document storage is connected to this local preview." icon={FileText}>
+    <ModulePanel title="Document centre" intro="Upload internal company documents to private storage. Only authorized administrators can download them." icon={FileText}>
+      <form onSubmit={handleUpload} className="mb-6 grid gap-3 rounded-xl border border-ink/8 bg-paper/50 p-4 md:grid-cols-2">
+        <label className="block">
+          <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wide text-slate">Document title</span>
+          <input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={200} required className="h-10 w-full rounded-lg border border-ink/12 bg-white px-3 text-xs outline-none focus:border-orange-400" placeholder="e.g. Vendor policy" />
+        </label>
+        <label className="block">
+          <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wide text-slate">Category</span>
+          <input value={category} onChange={(event) => setCategory(event.target.value)} maxLength={80} required className="h-10 w-full rounded-lg border border-ink/12 bg-white px-3 text-xs outline-none focus:border-orange-400" placeholder="e.g. Operations" />
+        </label>
+        <label className="block md:col-span-2">
+          <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wide text-slate">File · PDF, Word, Excel, or CSV · maximum 20 MB</span>
+          <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv" required onChange={(event) => {
+            const selectedFile = event.target.files?.[0] || null;
+            setFile(selectedFile);
+            if (selectedFile && !title) setTitle(selectedFile.name.replace(/\.[^.]+$/, ""));
+          }} className="block w-full rounded-lg border border-ink/12 bg-white px-3 py-2 text-xs file:mr-3 file:rounded-md file:border-0 file:bg-paper file:px-3 file:py-2 file:text-xs file:font-semibold" />
+        </label>
+        {error && <p role="alert" className="text-xs text-red-700 md:col-span-2">{error}</p>}
+        <div className="md:col-span-2">
+          <Button type="submit" disabled={uploading} className="rounded-lg bg-[#e2701b] text-white hover:bg-[#ca6011]">
+            <Upload className="h-4 w-4" /> {uploading ? "Uploading…" : "Upload document"}
+          </Button>
+        </div>
+      </form>
       <div className="divide-y divide-ink/8">
-        {documents.map((document) => <div key={document.name} className="flex items-center gap-3 py-4"><span className="grid h-10 w-10 place-items-center rounded-lg bg-paper text-slate"><FileText className="h-4 w-4" /></span><span className="min-w-0 flex-1"><span className="block text-xs font-semibold">{document.name}</span><span className="mt-1 block text-[10px] text-slate">{document.category} · {document.version}</span></span><span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] text-slate">{document.access}</span></div>)}
+        {documents.map((item) => (
+          <div key={item.id} className="flex flex-wrap items-center gap-3 py-4">
+            <span className="grid h-10 w-10 place-items-center rounded-lg bg-paper text-slate"><FileText className="h-4 w-4" /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block break-words text-xs font-semibold">{item.title}</span>
+              <span className="mt-1 block text-[10px] text-slate">{item.category} · {item.filename} · {(item.fileSize / (1024 * 1024)).toFixed(2)} MB · {formatIndiaDateTime(item.uploadedAt)}</span>
+            </span>
+            <Button type="button" variant="outline" size="sm" onClick={() => onDownload(item)} className="h-8 rounded-lg text-[11px]">
+              <Download className="h-3.5 w-3.5" /> Download
+            </Button>
+          </div>
+        ))}
       </div>
-      {!documents.length && <EmptyState title="No documents" description="No files have been added." />}
+      {!documents.length && <EmptyState title="No documents yet" description="Upload an internal company document to store it privately and make it available to authorized administrators." />}
     </ModulePanel>
   );
 }
 
-function ReportsManager({ submissions }) {
-  const types = ["enquiry", "contact", "vendor", "career", "investor"];
+function ReportsManager({ onGetReport }) {
+  const [date, setDate] = useState(indiaDate);
+  const [busy, setBusy] = useState("");
+  const [error, setError] = useState("");
+  const [lastReport, setLastReport] = useState(null);
+
+  const downloadReport = async (format) => {
+    setBusy(format);
+    setError("");
+    try {
+      const report = await onGetReport(date);
+      const counts = Object.fromEntries(reportTypes.map(([type]) => [
+        type,
+        report.records.filter((record) => record.type === type).length,
+      ]));
+      setLastReport({ date: report.date, total: report.records.length, counts });
+
+      if (format === "pdf") {
+        const { default: jsPDF } = await import("jspdf");
+        const pdf = new jsPDF();
+        pdf.setFontSize(18);
+        pdf.text("Pusapati Group - Daily submissions report", 14, 20);
+        pdf.setFontSize(11);
+        pdf.text(`Date: ${report.date} (India time)`, 14, 30);
+        pdf.text(`Total submissions: ${report.records.length}`, 14, 40);
+        pdf.setFontSize(12);
+        let y = 55;
+        for (const [type, label] of reportTypes) {
+          pdf.text(`${label}: ${counts[type]}`, 16, y);
+          y += 9;
+        }
+        if (!report.records.length) {
+          pdf.setFontSize(10);
+          pdf.text("No submissions were received on this date.", 14, y + 3);
+        }
+        pdf.save(`pusapati-daily-report-${report.date}.pdf`);
+      } else {
+        const escapeCell = (value) => {
+          let cell = String(value ?? "").replace(/\r?\n/g, " ");
+          if (/^\s*[=+\-@]/.test(cell)) cell = `'${cell}`;
+          return `"${cell.replaceAll('"', '""')}"`;
+        };
+        const rows = [
+          ["Submission ID", "Name", "Type", "Status", "Submitted at (India time)"],
+          ...report.records.map((record) => [
+            `${record.type}:${record.id}`,
+            record.name,
+            reportTypes.find(([type]) => type === record.type)?.[1] || record.type,
+            record.status,
+            formatIndiaDateTime(record.createdAt),
+          ]),
+        ];
+        const csv = `\uFEFF${rows.map((row) => row.map(escapeCell).join(",")).join("\r\n")}`;
+        const file = new Blob([csv], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(file);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `pusapati-daily-report-${report.date}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+    } catch (reportError) {
+      setError(reportError instanceof Error ? reportError.message : "Could not create the daily report.");
+    } finally {
+      setBusy("");
+    }
+  };
+
   return (
-    <ModulePanel title="Reports & analytics" intro="Counts below include only local browser records." icon={Activity}>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{types.map((type) => <div key={type} className="rounded-lg border border-ink/8 p-4"><p className="text-xs capitalize text-slate">{type === "career" ? "Career applications" : `${type} submissions`}</p><p className="mt-3 text-2xl font-semibold">{submissions.filter((item) => item.type === type).length}</p><p className="mt-1 text-[10px] text-slate">local records</p></div>)}</div>
-      <div className="mt-5 rounded-lg border border-dashed border-ink/15 bg-paper/50 p-8 text-center"><Activity className="mx-auto h-6 w-6 text-slate/50" /><p className="mt-3 text-xs font-semibold">No live reporting data is connected</p><p className="mx-auto mt-1 max-w-md text-[11px] leading-5 text-slate">Live reports require authenticated access to operational records.</p></div>
+    <ModulePanel title="Reports & analytics" intro="Download a daily report of submissions received on the selected date. Dates use India Standard Time." icon={Activity}>
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="block">
+          <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wide text-slate">Report date</span>
+          <input type="date" value={date} onChange={(event) => setDate(event.target.value)} className="h-10 rounded-lg border border-ink/12 bg-white px-3 text-xs outline-none focus:border-orange-400" />
+        </label>
+        <Button type="button" onClick={() => downloadReport("pdf")} disabled={Boolean(busy) || !date} className="rounded-lg bg-[#e2701b] text-white hover:bg-[#ca6011]">
+          <Download className="h-4 w-4" /> {busy === "pdf" ? "Preparing PDF…" : "Download PDF summary"}
+        </Button>
+        <Button type="button" variant="outline" onClick={() => downloadReport("csv")} disabled={Boolean(busy) || !date} className="rounded-lg">
+          <Download className="h-4 w-4" /> {busy === "csv" ? "Preparing CSV…" : "Download CSV details"}
+        </Button>
+      </div>
+      <p className="mt-3 text-[11px] text-slate">The PDF contains totals by form. The CSV lists each submission’s name, type, status, and time; it does not include message contents or uploaded files.</p>
+      {error && <p role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">{error}</p>}
+      {lastReport && (
+        <div className="mt-5 rounded-lg border border-ink/8 bg-paper/50 p-4">
+          <p className="text-xs font-semibold">Report ready for {lastReport.date} · {lastReport.total} submissions</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {reportTypes.map(([type, label]) => <p key={type} className="text-[11px] text-slate">{label}: <strong className="text-ink">{lastReport.counts[type]}</strong></p>)}
+          </div>
+        </div>
+      )}
     </ModulePanel>
   );
 }

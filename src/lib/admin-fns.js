@@ -76,28 +76,68 @@ async function getAdminReportRecords(date) {
   const startAt = start?.toISOString() ?? null;
   const endAt = end?.toISOString() ?? null;
   const records = await sql`
-    SELECT type, id, name, status, "createdAt"
+    SELECT type, id, name, status, "assignedTo", "createdAt",
+      phone, email, company, details
     FROM (
-      SELECT 'enquiry'::text AS type, id::text AS id, name, status,
-        created_at AS "createdAt"
-      FROM quote_enquiries
-      WHERE status <> 'deleted'
+      SELECT 'enquiry'::text AS type, q.id::text AS id, q.name, q.status,
+        q.assigned_to AS "assignedTo", q.created_at AS "createdAt",
+        q.phone, q.email, q.company,
+        jsonb_build_object(
+          'category', q.category, 'location', q.location, 'interest', q.interest,
+          'quantity', q.quantity, 'timeline', q.timeline, 'pourDate', q.pour_date,
+          'pourTime', q.pour_time, 'pumpRequired', q.pump_required,
+          'incoterms', q.incoterms, 'requirement', q.requirement,
+          'sourcePage', q.source_page,
+          'items', COALESCE((
+            SELECT jsonb_agg(jsonb_build_object(
+              'category', i.category, 'location', i.location, 'interest', i.interest,
+              'quantity', i.quantity, 'timeline', i.timeline, 'pourDate', i.pour_date,
+              'pourTime', i.pour_time, 'pumpRequired', i.pump_required,
+              'incoterms', i.incoterms, 'requirement', i.requirement
+            ) ORDER BY i.item_order)
+            FROM quote_enquiry_items AS i
+            WHERE i.enquiry_id = q.id
+          ), '[]'::jsonb)
+        ) AS details
+      FROM quote_enquiries AS q
+      WHERE q.status <> 'deleted'
       UNION ALL
-      SELECT 'contact'::text, id::text, name, status, created_at
-      FROM contact_messages
-      WHERE status <> 'deleted'
+      SELECT 'contact'::text, c.id::text, c.name, c.status,
+        c.assigned_to, c.created_at, c.phone, c.email, c.company,
+        jsonb_build_object(
+          'requirement', c.requirement, 'sourcePage', c.source_page
+        )
+      FROM contact_messages AS c
+      WHERE c.status <> 'deleted'
       UNION ALL
-      SELECT 'vendor'::text, id::text, contact_name, status, created_at
-      FROM vendor_applications
-      WHERE status <> 'deleted'
+      SELECT 'vendor'::text, v.id::text, v.contact_name, v.status,
+        v.assigned_to, v.created_at, v.phone, v.email, v.company_name,
+        jsonb_build_object(
+          'category', v.category, 'city', v.city, 'gstin', v.gstin,
+          'website', v.website, 'yearsInBusiness', v.years_in_business,
+          'description', v.description
+        )
+      FROM vendor_applications AS v
+      WHERE v.status <> 'deleted'
       UNION ALL
-      SELECT 'career'::text, id::text, full_name, status, created_at
-      FROM career_applications
-      WHERE status <> 'deleted'
+      SELECT 'career'::text, c.id::text, c.full_name, c.status,
+        c.assigned_to, c.created_at, c.phone, c.email, ''::text,
+        jsonb_build_object(
+          'role', c.role, 'department', c.department, 'experience', c.experience,
+          'portfolioUrl', c.portfolio_url, 'isInternship', c.is_internship,
+          'coverNote', c.cover_note, 'cvFilename', c.cv_filename
+        )
+      FROM career_applications AS c
+      WHERE c.status <> 'deleted'
       UNION ALL
-      SELECT 'investor'::text, id::text, full_name, status, created_at
-      FROM investor_requests
-      WHERE status <> 'deleted'
+      SELECT 'investor'::text, i.id::text, i.full_name, i.status,
+        i.assigned_to, i.created_at, i.phone, i.email, i.organisation,
+        jsonb_build_object(
+          'investorType', i.investor_type, 'areasOfInterest', i.areas_of_interest,
+          'message', i.message
+        )
+      FROM investor_requests AS i
+      WHERE i.status <> 'deleted'
     ) AS submissions
     WHERE (${startAt}::timestamptz IS NULL OR "createdAt" >= ${startAt}::timestamptz)
       AND (${endAt}::timestamptz IS NULL OR "createdAt" < ${endAt}::timestamptz)

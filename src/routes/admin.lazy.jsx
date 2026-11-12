@@ -181,7 +181,7 @@ const downloadReportPdf = async (report, scope) => {
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
   const margin = 12;
-  const tableWidths = [42, 56, 52, 40, pageWidth - (margin * 2) - 190];
+  const tableWidths = [36, 56, 120, 28, pageWidth - (margin * 2) - 240];
   const counts = Object.fromEntries(reportTypes.map(([type]) => [
     type,
     report.records.filter((record) => record.type === type).length,
@@ -215,14 +215,21 @@ const downloadReportPdf = async (report, scope) => {
   pdf.text(statusLines, margin, summaryY + 1);
   summaryY += statusLines.length * 4 + 5;
   const contentsLines = pdf.splitTextToSize(
-    "Table fields: submission ID, name, form type, status, and submitted time. Message contents and uploaded files are not included.",
+    "The table includes contact details and key form fields. Long messages, internal notes, and uploaded files are excluded.",
     pageWidth - (margin * 2),
   );
   pdf.text(contentsLines, margin, summaryY);
   summaryY += contentsLines.length * 4 + 5;
 
-  const drawTableHeader = (y) => {
-    const labels = ["Submission ID", "Name", "Form type", "Status", "Submitted at (IST)"];
+  const drawSectionHeader = (label, y) => {
+    if (y + 19 > pageHeight - 12) {
+      pdf.addPage();
+      y = 12;
+    }
+    pdf.setFontSize(10);
+    pdf.text(label, margin, y + 5);
+    y += 8;
+    const labels = ["Submission ID", "Name / contact", "Key details", "Status", "Received (IST)"];
     let x = margin;
     pdf.setFontSize(8);
     pdf.setFillColor(242, 244, 246);
@@ -234,39 +241,75 @@ const downloadReportPdf = async (report, scope) => {
     });
     return y + 9;
   };
-  let tableY = drawTableHeader(summaryY);
-  if (!report.records.length) {
-    pdf.setFontSize(8);
-    pdf.text("No submissions were received for this report.", margin + 2, tableY + 7);
-  }
-
-  for (const record of report.records) {
-    const values = [
-      `${record.type}:${record.id}`,
-      record.name || "Not provided",
-      reportTypes.find(([type]) => type === record.type)?.[1] || record.type,
-      capitalize(record.status),
-      formatIndiaDateTime(record.createdAt),
-    ];
-    const lines = values.map((value, index) => pdf.splitTextToSize(
-      String(value).replace(/\s+/g, " ").trim(),
-      tableWidths[index] - 4,
-    ));
-    const rowHeight = Math.max(9, ...lines.map((cellLines) => cellLines.length * 4 + 4));
-    if (tableY + rowHeight > pageHeight - 12) {
-      pdf.addPage();
-      tableY = drawTableHeader(12);
+  let tableY = summaryY;
+  for (const [type, label] of reportTypes) {
+    const sectionRecords = report.records.filter((record) => record.type === type);
+    tableY = drawSectionHeader(label, tableY);
+    if (!sectionRecords.length) {
+      pdf.setFontSize(8);
+      pdf.text("No submissions in this report.", margin + 2, tableY + 6);
+      tableY += 10;
+      continue;
     }
 
-    let x = margin;
-    pdf.setFontSize(7);
-    pdf.setDrawColor(224, 228, 232);
-    lines.forEach((cellLines, index) => {
-      pdf.rect(x, tableY, tableWidths[index], rowHeight);
-      pdf.text(cellLines, x + 2, tableY + 5);
-      x += tableWidths[index];
-    });
-    tableY += rowHeight;
+    for (const record of sectionRecords) {
+      const details = record.details || {};
+      const keyDetails = {
+        enquiry: [
+          details.category && `Category: ${details.category}`,
+          details.interest && `Interest: ${details.interest}`,
+          details.quantity && `Quantity: ${details.quantity}`,
+          details.location && `Location: ${details.location}`,
+          details.timeline && `Timeline: ${details.timeline}`,
+          Array.isArray(details.items) && details.items.length && `Items: ${details.items.length}`,
+        ],
+        contact: [record.company && `Company: ${record.company}`],
+        vendor: [
+          record.company && `Company: ${record.company}`,
+          details.category && `Category: ${details.category}`,
+          details.city && `City: ${details.city}`,
+          details.yearsInBusiness && `Years in business: ${details.yearsInBusiness}`,
+        ],
+        career: [
+          details.role && `Role: ${details.role}`,
+          details.department && `Department: ${details.department}`,
+          details.experience && `Experience: ${details.experience}`,
+          details.isInternship && "Internship",
+          details.cvFilename && "CV attached",
+        ],
+        investor: [
+          record.company && `Organisation: ${record.company}`,
+          details.investorType && `Investor type: ${details.investorType}`,
+          details.areasOfInterest && `Areas of interest: ${details.areasOfInterest}`,
+        ],
+      }[record.type].filter(Boolean).join(" · ") || "No additional details";
+      const values = [
+        `${record.type}:${record.id}`,
+        [record.name || "Not provided", record.email, record.phone].filter(Boolean).join(" · "),
+        keyDetails,
+        capitalize(record.status),
+        formatIndiaDateTime(record.createdAt),
+      ];
+      const lines = values.map((value, index) => pdf.splitTextToSize(
+        String(value).replace(/\s+/g, " ").trim(),
+        tableWidths[index] - 4,
+      ));
+      const rowHeight = Math.max(9, ...lines.map((cellLines) => cellLines.length * 4 + 4));
+      if (tableY + rowHeight > pageHeight - 12) {
+        pdf.addPage();
+        tableY = drawSectionHeader(label, 12);
+      }
+
+      let x = margin;
+      pdf.setFontSize(7);
+      pdf.setDrawColor(224, 228, 232);
+      lines.forEach((cellLines, index) => {
+        pdf.rect(x, tableY, tableWidths[index], rowHeight);
+        pdf.text(cellLines, x + 2, tableY + 5);
+        x += tableWidths[index];
+      });
+      tableY += rowHeight;
+    }
   }
 
   const pageCount = pdf.getNumberOfPages();
@@ -284,15 +327,65 @@ const downloadReportCsv = (report, scope) => {
     if (/^\s*[=+\-@]/.test(cell)) cell = `'${cell}`;
     return `"${cell.replaceAll('"', '""')}"`;
   };
+  const formatEnquiryItems = (items) => items.map((item, index) => {
+    const fields = [
+      ["Category", item.category],
+      ["Location", item.location],
+      ["Interest", item.interest],
+      ["Quantity", item.quantity],
+      ["Timeline", item.timeline],
+      ["Pour date", item.pourDate],
+      ["Pour time", item.pourTime],
+      ["Pump required", item.pumpRequired],
+      ["Incoterms", item.incoterms],
+      ["Requirement", item.requirement],
+    ].filter(([, value]) => value);
+    return `Item ${index + 1}: ${fields.map(([label, value]) => `${label}: ${value}`).join("; ")}`;
+  }).join(" | ");
   const rows = [
-    ["Submission ID", "Name", "Type", "Status", "Submitted at (India time)"],
-    ...report.records.map((record) => [
-      `${record.type}:${record.id}`,
-      record.name,
-      reportTypes.find(([type]) => type === record.type)?.[1] || record.type,
-      record.status,
-      formatIndiaDateTime(record.createdAt),
-    ]),
+    [
+      "Submission ID", "Name", "Type", "Status", "Assigned to", "Submitted at (India time)",
+      "Phone", "Email", "Company / organisation", "Category", "Location / city",
+      "Interest / areas of interest", "Quantity", "Timeline", "Pour date", "Pour time",
+      "Pump required", "Incoterms", "Role", "Department", "Experience", "Internship",
+      "Portfolio URL", "CV filename", "GSTIN", "Website", "Years in business",
+      "Requirement / message / description", "Enquiry item details", "Source page",
+    ],
+    ...report.records.map((record) => {
+      const details = record.details || {};
+      return [
+        `${record.type}:${record.id}`,
+        record.name,
+        reportTypes.find(([type]) => type === record.type)?.[1] || record.type,
+        record.status,
+        record.assignedTo,
+        formatIndiaDateTime(record.createdAt),
+        record.phone,
+        record.email,
+        record.company,
+        details.category,
+        details.location || details.city,
+        details.interest || details.areasOfInterest,
+        details.quantity,
+        details.timeline,
+        details.pourDate,
+        details.pourTime,
+        details.pumpRequired,
+        details.incoterms,
+        details.role,
+        details.department,
+        details.experience,
+        typeof details.isInternship === "boolean" ? (details.isInternship ? "Yes" : "No") : "",
+        details.portfolioUrl,
+        details.cvFilename,
+        details.gstin,
+        details.website,
+        details.yearsInBusiness,
+        details.requirement || details.coverNote || details.description || details.message,
+        Array.isArray(details.items) ? formatEnquiryItems(details.items) : "",
+        details.sourcePage,
+      ];
+    }),
   ];
   const csv = `\uFEFF${rows.map((row) => row.map(escapeCell).join(",")).join("\r\n")}`;
   const file = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -1611,7 +1704,7 @@ function ReportsManager({ onGetReport }) {
           </Button>
         </div>
       </section>
-      <p className="mt-3 text-[11px] text-slate">PDFs include an executive summary and a table of submission ID, name, form type, status, and time. CSV files contain the same table. Message contents and uploaded files are excluded.</p>
+      <p className="mt-3 text-[11px] text-slate">PDFs include totals by form and status, followed by a paginated table with contact details and key form fields. CSVs include all submitted form fields, including requirements and messages. Both exclude internal notes and uploaded file contents.</p>
       {error && <p role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">{error}</p>}
       {lastReport && (
         <div className="mt-5 rounded-lg border border-ink/8 bg-paper/50 p-4">
